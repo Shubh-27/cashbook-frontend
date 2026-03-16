@@ -1,7 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ReceiptText, Building2, Download, FileText } from 'lucide-react';
-import { api } from '../api';
-import { Button } from './ui/button';
+import { LayoutDashboard, ReceiptText, Building2, FileText, Settings } from 'lucide-react';
 
 export function Sidebar() {
   const navItems = [
@@ -9,12 +7,8 @@ export function Sidebar() {
     { name: 'Transaction', path: '/transaction', icon: ReceiptText },
     { name: 'Accounts', path: '/accounts', icon: Building2 },
     { name: 'Descriptions', path: '/descriptions', icon: FileText },
+    { name: 'Settings', path: '/settings', icon: Settings },
   ];
-
-  const handleExport = async () => {
-    await api.exportDb();
-    // exportDb handles redirection, so we don't necessarily need an alert here
-  };
 
   return (
     <div className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10">
@@ -42,17 +36,6 @@ export function Sidebar() {
             {item.name}
           </NavLink>
         ))}
-      </div>
-
-      <div className="p-4 border-t border-slate-100 flex flex-col gap-2"> 
-        <Button
-          variant="outline"
-          onClick={handleExport}
-          className="w-full justify-center rounded-xl"
-        >
-          <Download className="w-4 h-4" />
-          Export Data
-        </Button>
       </div>
     </div>
   );

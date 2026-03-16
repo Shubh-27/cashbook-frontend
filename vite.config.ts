@@ -17,7 +17,8 @@ export default defineConfig({
   base: './',
   build: {
     outDir: '../electron/ui',
-    emptyOutDir: true
+    emptyOutDir: true,
+    sourcemap: false
   },
   server: {
     port: 5173,

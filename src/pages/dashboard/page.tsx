@@ -5,7 +5,6 @@ import { Button } from '../../components/ui/button';
 
 export function Dashboard() {
   const accounts = useAppStore(state => state.accounts);
-  const totalBalance = useAppStore(state => state.totalBalance);
   const setSelectedAccount = useAppStore(state => state.setSelectedAccount);
   const navigate = useNavigate();
 
@@ -20,18 +19,8 @@ export function Dashboard() {
     return <Icon className="w-5 h-5 text-teal-600" />;
   };
 
-  const formatter = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
-
   return (
     <div className="flex flex-col gap-8 animate-in fade-in duration-300">
-
-      <div className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden flex flex-col gap-2 shadow-lg">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <h1 className="text-slate-400 font-medium tracking-wide text-sm uppercase">Total Net Balance</h1>
-        <div className="text-5xl font-bold tracking-tight mt-1 flex items-baseline gap-2">
-          {formatter.format(totalBalance)}
-        </div>
-      </div>
 
       <div>
         <div className="flex items-center justify-between mb-6">
@@ -79,15 +68,6 @@ export function Dashboard() {
                 <p className="text-slate-500 font-medium text-sm mb-4">
                   {acc.account_number ? `****${acc.account_number.toString().slice(-4)}` : 'No Acc Number'}
                 </p>
-
-                <div className="pt-4 border-t border-slate-50 flex items-end justify-between">
-                  <div>
-                    <div className="text-xs font-medium text-slate-400 mb-1">Current Balance</div>
-                    <div className="font-bold text-xl text-slate-900 tracking-tight">
-                      {formatter.format(acc.balance || 0)}
-                    </div>
-                  </div>
-                </div>
               </div>
             ))}
           </div>

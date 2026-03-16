@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { DeleteConfirmModal } from '../../components/DeleteConfirmModal';
 import { useAppStore } from '../../store';
 import { api } from '../../api';
 import { Pencil, Trash2, Check, X, Plus, Building } from 'lucide-react';
@@ -7,13 +8,14 @@ import { Input } from '../../components/ui/input';
 
 export function AccountManager() {
   const accounts = useAppStore(state => state.accounts);
-  const fetchAccountsAndBalance = useAppStore(state => state.fetchAccountsAndBalance);
+  const fetchAccounts = useAppStore(state => state.fetchAccounts);
 
   const [isEditing, setIsEditing] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [name, setName] = useState('');
   const [bankName, setBankName] = useState('');
   const [accNumber, setAccNumber] = useState('');
+  const [deleteTargetSid, setDeleteTargetSid] = useState<string | null>(null);
 
   const resetForm = () => {
     setName(''); setBankName(''); setAccNumber('');
@@ -30,7 +32,7 @@ export function AccountManager() {
     }
 
     resetForm();
-    await fetchAccountsAndBalance();
+    await fetchAccounts();
   };
 
   const handleEdit = (acc: any) => {
@@ -41,11 +43,11 @@ export function AccountManager() {
     setAccNumber(acc.account_number || '');
   };
 
-  const handleDelete = async (sid: string) => {
-    if (confirm("Are you sure? This will delete all transactions for this account!")) {
-      await api.deleteAccount(sid);
-      await fetchAccountsAndBalance();
-    }
+  const handleDelete = async () => {
+    if (!deleteTargetSid) return;
+    await api.deleteAccount(deleteTargetSid);
+    setDeleteTargetSid(null);
+    await fetchAccounts();
   };
 
   return (
@@ -124,7 +126,7 @@ export function AccountManager() {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(acc)} className="text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.account_sid)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => setDeleteTargetSid(acc.account_sid)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>
@@ -141,6 +143,14 @@ export function AccountManager() {
           </tbody>
         </table>
       </div>
+
+      <DeleteConfirmModal
+        open={!!deleteTargetSid}
+        onOpenChange={(open) => !open && setDeleteTargetSid(null)}
+        onConfirm={handleDelete}
+        title="Delete Account"
+        description="Are you sure you want to delete this account? This will delete all transactions associated with it! This action is irreversible."
+      />
     </div>
   );
 }

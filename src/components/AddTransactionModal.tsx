@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { useAppStore } from '../store';
 import { api } from '../api';
 import {
@@ -41,7 +42,7 @@ export function AddTransactionModal() {
   const open = useAppStore(state => state.quickAddOpen);
   const setOpen = useAppStore(state => state.setQuickAddOpen);
   const accounts = useAppStore(state => state.accounts);
-  const fetchAccountsAndBalance = useAppStore(state => state.fetchAccountsAndBalance);
+  const fetchAccounts = useAppStore(state => state.fetchAccounts);
 
   const [fastEntry, setFastEntry] = useState(false);
   const [accountSid, setAccountSid] = useState<string>('');
@@ -64,6 +65,12 @@ export function AddTransactionModal() {
     }
   }, [open, accounts, accountSid]);
 
+  useKeyboardShortcut('mod+enter', () => {
+    if (open) {
+      handleSubmit({ preventDefault: () => { } } as React.FormEvent);
+    }
+  }, { enabled: open });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accountSid || !amount) return;
@@ -85,13 +92,13 @@ export function AddTransactionModal() {
       notes
     });
 
-    fetchAccountsAndBalance();
+    fetchAccounts();
     window.dispatchEvent(new Event('transaction-added'));
 
     setDescription('');
     setAmount('');
     setNotes('');
-    
+
     if (!fastEntry) {
       setOpen(false);
     }
@@ -243,9 +250,9 @@ export function AddTransactionModal() {
 
           <DialogFooter className="sm:justify-between items-center gap-3 pt-4 border-t">
             <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="fast-entry" 
-                checked={fastEntry} 
+              <Checkbox
+                id="fast-entry"
+                checked={fastEntry}
                 onCheckedChange={(checked: boolean | "indeterminate") => setFastEntry(!!checked)}
               />
               <Label htmlFor="fast-entry" className="text-sm font-normal cursor-pointer">

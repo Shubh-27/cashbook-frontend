@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { useAppStore } from './store';
 import { Layout } from './components/Layout';
@@ -6,37 +7,20 @@ import { Dashboard } from './pages/dashboard/page';
 import { Transaction } from './pages/transaction/page';
 import { AccountManager } from './pages/accounts/page';
 import { Descriptions } from './pages/descriptions/page';
+import { SettingsPage } from './pages/settings/page';
 import { AddTransactionModal } from './components/AddTransactionModal';
 
 function App() {
-  const fetchAccountsAndBalance = useAppStore(state => state.fetchAccountsAndBalance);
+  const fetchAccounts = useAppStore(state => state.fetchAccounts);
   const setQuickAddOpen = useAppStore(state => state.setQuickAddOpen);
 
   useEffect(() => {
-    fetchAccountsAndBalance();
-  }, [fetchAccountsAndBalance]);
+    fetchAccounts();
+  }, [fetchAccounts]);
 
-  useEffect(() => {
-  const handleKeyDown = (e : any) => {
-    const isMac = navigator.platform.toUpperCase().includes("MAC");
-
-    const modifierPressed = isMac ? e.metaKey : e.ctrlKey;
-
-    if (
-      modifierPressed &&
-      e.shiftKey &&
-      e.key === "Enter" &&
-      !["INPUT", "TEXTAREA"].includes(e.target.tagName)
-    ) {
-      e.preventDefault();
-      setQuickAddOpen(true);
-    }
-  };
-
-  window.addEventListener("keydown", handleKeyDown);
-
-  return () => window.removeEventListener("keydown", handleKeyDown);
-}, [setQuickAddOpen]);
+  useKeyboardShortcut('mod+shift+enter', () => {
+    setQuickAddOpen(true);
+  });
 
 
   return (
@@ -47,6 +31,7 @@ function App() {
           <Route path="/transaction" element={<Transaction />} />
           <Route path="/accounts" element={<AccountManager />} />
           <Route path="/descriptions" element={<Descriptions />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Routes>
       <AddTransactionModal />

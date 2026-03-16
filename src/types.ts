@@ -6,7 +6,6 @@ export interface Account {
   last_modified_date_time: string;
   last_modified_by_user_id?: number | null;
   status?: number;
-  balance?: number;
 }
 
 export interface Description {
@@ -27,6 +26,61 @@ export interface Transaction {
   description?: Description;
   debit: number | null;
   credit: number | null;
-  balance: number | null;
   notes: string | null;
+}
+
+// Generic Search & List Types
+export interface FilterRequest {
+  key: string;
+  condition: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'between';
+  value?: any;
+  from?: any;
+  to?: any;
+  type?: string;
+}
+
+export interface SearchRequest {
+  search?: string;
+  page: number;
+  page_size: number;
+  sort_by?: string;
+  sort_order?: 'asc' | 'desc';
+  filters?: FilterRequest[];
+}
+
+export interface PagedResult<T> {
+  data: T[];
+  total_count: number;
+  page: number;
+  page_size: number;
+}
+
+export interface VwTransactionList {
+  transaction_sid: string;
+  transaction_date: string;
+  debit: number;
+  credit: number;
+  balance: number;
+  notes: string | null;
+  status: number;
+  account_sid: string | null;
+  account_name: string | null;
+  description_sid: string | null;
+  description_name: string | null;
+}
+
+export interface VwAccountList {
+  account_sid: string;
+  account_name: string;
+  bank_name: string | null;
+  account_number: number | null;
+  transaction_count: number;
+  status: number;
+}
+
+export interface VwDescriptionList {
+  description_sid: string;
+  description_name: string;
+  usage_count: number;
+  status: number;
 }

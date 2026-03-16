@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { DeleteConfirmModal } from '../../components/DeleteConfirmModal';
 import { useAppStore } from '../../store';
 import { api } from '../../api';
 import {
@@ -7,7 +8,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import type { Transaction, Description } from '../../types';
+import type { Transaction, Description, VwTransactionList, FilterRequest } from '../../types';
 import { format, parseISO } from 'date-fns';
 import { Pencil, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -29,43 +30,57 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 
-const columnHelper = createColumnHelper<Transaction>();
+const columnHelper = createColumnHelper<VwTransactionList>();
 
 export function Transaction() {
+  const open = useAppStore(state => state.quickAddOpen);
   const accounts = useAppStore(state => state.accounts);
   const selectedAccountSid = useAppStore(state => state.selectedAccountSid);
   const setSelectedAccount = useAppStore(state => state.setSelectedAccount);
   const globalSearch = useAppStore(state => state.globalSearch);
-  const fetchAccountsAndBalance = useAppStore(state => state.fetchAccountsAndBalance);
+  const fetchAccounts = useAppStore(state => state.fetchAccounts);
 
   const [descriptions, setDescriptions] = useState<Description[]>([]);
   const [selectedDescriptionSid, setSelectedDescriptionSid] = useState<string>('all');
-  const [data, setData] = useState<Transaction[]>([]);
+  const [data, setData] = useState<VwTransactionList[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const limit = 50;
 
-  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [editingTx, setEditingTx] = useState<VwTransactionList | null>(null);
+  const [deleteTargetTx, setDeleteTargetTx] = useState<VwTransactionList | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      const res = await api.getTransactions({
-        accountId: selectedAccountSid === 'all' ? undefined : selectedAccountSid || undefined,
-        descriptionSid: selectedDescriptionSid === 'all' ? undefined : selectedDescriptionSid,
+      const filters: FilterRequest[] = [];
+
+      if (selectedAccountSid && selectedAccountSid !== 'all') {
+        filters.push({ key: 'AccountSID', condition: 'equals', value: selectedAccountSid });
+      }
+
+      if (selectedDescriptionSid && selectedDescriptionSid !== 'all') {
+        filters.push({ key: 'DescriptionSID', condition: 'equals', value: selectedDescriptionSid });
+      }
+
+      const res = await api.listTransactions({
         search: globalSearch,
         page,
-        limit
+        page_size: limit,
+        sort_by: 'TransactionDate',
+        sort_order: 'desc',
+        filters
       });
       setData(res.data);
-      setTotal(res.total);
+      setTotal(res.total_count);
     } catch (e) {
       console.error(e);
     }
   }, [selectedAccountSid, selectedDescriptionSid, globalSearch, page]);
 
   useEffect(() => {
-    api.getDescriptions().then(setDescriptions);
-  }, []);
+    if (open) return;
+    api.listDescriptions({ page: 1, page_size: 1000 }).then(res => setDescriptions(res.data as any));
+  }, [open]);
 
   useEffect(() => {
     loadData();
@@ -79,12 +94,12 @@ export function Transaction() {
     setPage(1);
   }, [selectedAccountSid, selectedDescriptionSid, globalSearch]);
 
-  const handleDelete = async (tx: Transaction) => {
-    if (confirm("Delete this transaction?")) {
-      await api.deleteTransaction(tx.transaction_sid, tx.account_sid ?? '');
-      loadData();
-      fetchAccountsAndBalance();
-    }
+  const handleDelete = async () => {
+    if (!deleteTargetTx) return;
+    await api.deleteTransaction(deleteTargetTx.transaction_sid, deleteTargetTx.account_sid ?? '');
+    setDeleteTargetTx(null);
+    loadData();
+    fetchAccounts();
   };
 
   const handleEditSave = async (e: React.FormEvent) => {
@@ -94,14 +109,14 @@ export function Transaction() {
       account_sid: editingTx.account_sid,
       transaction_date: editingTx.transaction_date,
       description_sid: editingTx.description_sid,
-      description_name: editingTx.description?.description_name,
+      description_name: editingTx.description_name,
       debit: editingTx.debit,
       credit: editingTx.credit,
       notes: editingTx.notes
     });
     setEditingTx(null);
     loadData();
-    fetchAccountsAndBalance();
+    fetchAccounts();
   };
 
   const columns = useMemo(() => [
@@ -114,9 +129,9 @@ export function Transaction() {
       header: 'DATE',
       cell: info => <span className="font-medium">{format(parseISO(info.getValue()), 'dd MMM yyyy')}</span>,
     }),
-    columnHelper.accessor('description', {
+    columnHelper.accessor('description_name', {
       header: 'DESCRIPTION',
-      cell: info => <span className="text-slate-800 font-medium">{info.getValue()?.description_name ?? '-'}</span>,
+      cell: info => <span className="text-slate-800 font-medium">{info.getValue() ?? '-'}</span>,
     }),
     columnHelper.accessor('debit', {
       header: 'DEBIT',
@@ -126,21 +141,17 @@ export function Transaction() {
       header: 'CREDIT',
       cell: info => (info.getValue() ?? 0) > 0 ? <span className="text-teal-600 font-medium">{(info.getValue() ?? 0).toFixed(2)}</span> : '-',
     }),
-    columnHelper.accessor('balance', {
-      header: 'BALANCE',
-      cell: info => <span className="font-bold text-slate-800">{(info.getValue() ?? 0).toFixed(2)}</span>,
-    }),
     columnHelper.accessor('notes', {
       header: 'NOTES',
       cell: info => <span className="text-slate-500 text-sm">{info.getValue() || '-'}</span>,
     }),
     columnHelper.display({
       id: 'actions',
-      header: '',
+      header: 'Actions',
       cell: info => (
-        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Button variant="ghost" size="icon" onClick={() => setEditingTx(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><Pencil className="w-4 h-4" /></Button>
-          <Button variant="ghost" size="icon" onClick={() => handleDelete(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setDeleteTargetTx(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
         </div>
       ),
     })
@@ -292,8 +303,8 @@ export function Transaction() {
                   <Input
                     id="edit-description"
                     type="text"
-                    value={editingTx.description?.description_name ?? ''}
-                    onChange={e => setEditingTx({ ...editingTx, description: { ...editingTx.description, description_sid: editingTx.description?.description_sid ?? '', description_name: e.target.value, created_date_time: null, last_modified_date_time: null } })}
+                    value={editingTx.description_name ?? ''}
+                    onChange={e => setEditingTx({ ...editingTx, description_name: e.target.value, description_sid: null })}
                     className="h-10"
                   />
                 </div>
@@ -346,6 +357,14 @@ export function Transaction() {
           )}
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmModal
+        open={!!deleteTargetTx}
+        onOpenChange={(open) => !open && setDeleteTargetTx(null)}
+        onConfirm={handleDelete}
+        title="Delete Transaction"
+        description="Are you sure you want to delete this transaction record?"
+      />
     </div>
   );
 }

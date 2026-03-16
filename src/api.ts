@@ -1,8 +1,16 @@
+import type { SearchRequest, PagedResult, VwTransactionList, VwAccountList, VwDescriptionList } from './types';
+
 const API_URL = 'http://localhost:5000/api';
 
 export const api = {
-  getAccounts: async () => {
-    const res = await fetch(`${API_URL}/accounts`);
+  // Accounts
+  // Accounts
+  listAccounts: async (request: SearchRequest): Promise<PagedResult<VwAccountList>> => {
+    const res = await fetch(`${API_URL}/accounts/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
     return res.json();
   },
   addAccount: async (data: any) => {
@@ -27,15 +35,17 @@ export const api = {
     });
     return res.json();
   },
-  getTotalBalance: async () => {
-    const res = await fetch(`${API_URL}/balance/total`);
+
+  // Descriptions
+  listDescriptions: async (request: SearchRequest): Promise<PagedResult<VwDescriptionList>> => {
+    const res = await fetch(`${API_URL}/descriptions/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
     return res.json();
   },
-  getAccountBalances: async () => {
-    const res = await fetch(`${API_URL}/accounts/balances`);
-    return res.json();
-  },
-  getDescriptions: async () => {
+  getDescriptions: async (): Promise<VwDescriptionList[]> => {
     const res = await fetch(`${API_URL}/descriptions`);
     return res.json();
   },
@@ -61,15 +71,14 @@ export const api = {
     });
     return res.json();
   },
-  getTransactions: async (options: { accountId?: string, descriptionSid?: string, search?: string, page?: number, limit?: number }) => {
-    const query = new URLSearchParams();
-    if (options.accountId) query.append('accountId', options.accountId);
-    if (options.descriptionSid) query.append('descriptionSid', options.descriptionSid);
-    if (options.search) query.append('search', options.search);
-    if (options.page) query.append('page', options.page.toString());
-    if (options.limit) query.append('limit', options.limit.toString());
-    
-    const res = await fetch(`${API_URL}/transactions?${query.toString()}`);
+
+  // Transactions
+  listTransactions: async (request: SearchRequest): Promise<PagedResult<VwTransactionList>> => {
+    const res = await fetch(`${API_URL}/transactions/list`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request)
+    });
     return res.json();
   },
   addTransaction: async (data: any) => {
@@ -94,9 +103,32 @@ export const api = {
     });
     return res.json();
   },
-  exportDb: async () => {
-    // For a file download, we trigger it via window location or a blob fetch
-    window.location.href = `${API_URL}/export`;
-    return { success: true };
+
+  // Database
+  exportDatabase: async () => {
+    const res = await fetch(`${API_URL}/database/export`);
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bank_backup_${new Date().toISOString().split('T')[0]}.db`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+  importDatabase: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_URL}/database/import`, {
+      method: 'POST',
+      body: formData
+    });
+    if (!res.ok) {
+      const error = await res.text();
+      throw new Error(error || 'Import failed');
+    }
+    return res.json();
   }
 };

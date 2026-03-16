@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { DeleteConfirmModal } from '../../components/DeleteConfirmModal';
 import { api } from '../../api';
 import {
   createColumnHelper,
@@ -6,8 +7,7 @@ import {
   getCoreRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import type { Description } from '../../types';
-import { format, parseISO } from 'date-fns';
+import type { VwDescriptionList } from '../../types';
 import { Pencil, Trash2, Plus } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import {
@@ -20,19 +20,20 @@ import {
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 
-const columnHelper = createColumnHelper<Description>();
+const columnHelper = createColumnHelper<VwDescriptionList>();
 
 export function Descriptions() {
-  const [data, setData] = useState<Description[]>([]);
-  const [editingDesc, setEditingDesc] = useState<Description | null>(null);
+  const [data, setData] = useState<VwDescriptionList[]>([]);
+  const [editingDesc, setEditingDesc] = useState<VwDescriptionList | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<VwDescriptionList | null>(null);
 
   const loadData = async () => {
     try {
-      const res = await api.getDescriptions();
-      setData(res);
-    } catch(e) {
+      const res = await api.listDescriptions({ page: 1, page_size: 1000, sort_by: 'DescriptionName', sort_order: 'asc' });
+      setData(res.data as any);
+    } catch (e) {
       console.error(e);
     }
   };
@@ -41,11 +42,11 @@ export function Descriptions() {
     loadData();
   }, []);
 
-  const handleDelete = async (desc: Description) => {
-    if (confirm(`Delete description "${desc.description_name}"?`)) {
-      await api.deleteDescription(desc.description_sid);
-      loadData();
-    }
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    await api.deleteDescription(deleteTarget.description_sid);
+    setDeleteTarget(null);
+    loadData();
   };
 
   const handleEditSave = async (e: React.FormEvent) => {
@@ -79,17 +80,17 @@ export function Descriptions() {
       header: 'NAME',
       cell: info => <span className="font-medium text-slate-800">{info.getValue()}</span>,
     }),
-    columnHelper.accessor('created_date_time', {
-      header: 'CREATED',
-      cell: info => info.getValue() ? <span className="text-slate-500">{format(parseISO(info.getValue()!), 'dd MMM yyyy, HH:mm')}</span> : '-',
+    columnHelper.accessor('usage_count', {
+      header: 'USAGE COUNT',
+      cell: info => info.getValue() ? <span className="text-slate-500">{info.getValue()}</span> : '-',
     }),
     columnHelper.display({
       id: 'actions',
-      header: '',
+      header: 'ACTIONS',
       cell: info => (
-        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" onClick={() => setEditingDesc(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><Pencil className="w-4 h-4"/></Button>
-          <Button variant="ghost" size="icon" onClick={() => handleDelete(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4"/></Button>
+        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button variant="ghost" size="icon" onClick={() => setEditingDesc(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><Pencil className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
         </div>
       ),
     })
@@ -105,7 +106,7 @@ export function Descriptions() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-300 h-full">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Descriptions Manager</h1>
-        <Button 
+        <Button
           onClick={() => setIsAdding(true)}
           className="rounded-xl font-medium"
         >
@@ -161,9 +162,9 @@ export function Descriptions() {
             <form onSubmit={handleEditSave} className="flex flex-col gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-desc-name">Name</Label>
-                <Input 
+                <Input
                   id="edit-desc-name"
-                  type="text" 
+                  type="text"
                   value={editingDesc.description_name}
                   onChange={e => setEditingDesc({ ...editingDesc, description_name: e.target.value })}
                   className="h-10"
@@ -192,9 +193,9 @@ export function Descriptions() {
           <form onSubmit={handleAddSubmit} className="flex flex-col gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="new-desc-name">Name</Label>
-              <Input 
+              <Input
                 id="new-desc-name"
-                type="text" 
+                type="text"
                 value={newName}
                 onChange={e => setNewName(e.target.value)}
                 className="h-10"
@@ -213,6 +214,15 @@ export function Descriptions() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <DeleteConfirmModal
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Description"
+        description="Are you sure you want to delete this description? This will affect existing transactions using it."
+        itemName={deleteTarget?.description_name}
+      />
     </div>
   );
 }
