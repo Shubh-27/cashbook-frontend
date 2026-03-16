@@ -8,7 +8,17 @@ import {
 } from '@tanstack/react-table';
 import type { Description } from '../../types';
 import { format, parseISO } from 'date-fns';
-import { Pencil, Trash2, X, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '../../components/ui/dialog';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
 
 const columnHelper = createColumnHelper<Description>();
 
@@ -77,9 +87,9 @@ export function Descriptions() {
       id: 'actions',
       header: '',
       cell: info => (
-        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-          <button onClick={() => setEditingDesc(info.row.original)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg"><Pencil className="w-4 h-4"/></button>
-          <button onClick={() => handleDelete(info.row.original)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4"/></button>
+        <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button variant="ghost" size="icon" onClick={() => setEditingDesc(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><Pencil className="w-4 h-4"/></Button>
+          <Button variant="ghost" size="icon" onClick={() => handleDelete(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4"/></Button>
         </div>
       ),
     })
@@ -95,13 +105,13 @@ export function Descriptions() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-300 h-full">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Descriptions Manager</h1>
-        <button 
+        <Button 
           onClick={() => setIsAdding(true)}
-          className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-800 transition-all shadow-sm"
+          className="rounded-xl font-medium"
         >
           <Plus className="w-4 h-4" />
           Add Description
-        </button>
+        </Button>
       </div>
 
       <div className="bg-white border border-slate-200 shadow-sm rounded-2xl flex-1 flex flex-col overflow-hidden">
@@ -142,65 +152,67 @@ export function Descriptions() {
       </div>
 
       {/* Edit Modal */}
-      {editingDesc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-800">Edit Description</h2>
-              <button onClick={() => setEditingDesc(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleEditSave} className="p-6 flex flex-col gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                <input 
+      <Dialog open={!!editingDesc} onOpenChange={(open) => !open && setEditingDesc(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Description</DialogTitle>
+          </DialogHeader>
+          {editingDesc && (
+            <form onSubmit={handleEditSave} className="flex flex-col gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-desc-name">Name</Label>
+                <Input 
+                  id="edit-desc-name"
                   type="text" 
                   value={editingDesc.description_name}
                   onChange={e => setEditingDesc({ ...editingDesc, description_name: e.target.value })}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none font-medium text-sm"
+                  className="h-10"
                   required
                 />
               </div>
-              <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setEditingDesc(null)} className="px-4 py-2 text-sm font-medium text-slate-600">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700">Save Changes</button>
-              </div>
+              <DialogFooter className="sm:justify-end gap-3 pt-4 border-t">
+                <Button variant="ghost" type="button" onClick={() => setEditingDesc(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Save Changes
+                </Button>
+              </DialogFooter>
             </form>
-          </div>
-        </div>
-      )}
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Add Modal */}
-      {isAdding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-800">New Description</h2>
-              <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
+      <Dialog open={isAdding} onOpenChange={setIsAdding}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Description</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddSubmit} className="flex flex-col gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-desc-name">Name</Label>
+              <Input 
+                id="new-desc-name"
+                type="text" 
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                className="h-10"
+                placeholder="e.g. Salary, Rent, Groceries"
+                required
+              />
             </div>
-            <form onSubmit={handleAddSubmit} className="p-6 flex flex-col gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
-                <input 
-                  type="text" 
-                  value={newName}
-                  onChange={e => setNewName(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 outline-none font-medium text-sm"
-                  placeholder="e.g. Salary, Rent, Groceries"
-                  required
-                />
-              </div>
-              <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => setIsAdding(false)} className="px-4 py-2 text-sm font-medium text-slate-600">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800">Add</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <DialogFooter className="sm:justify-end gap-3 pt-4 border-t">
+              <Button variant="ghost" type="button" onClick={() => setIsAdding(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Add
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

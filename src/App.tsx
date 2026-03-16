@@ -10,10 +10,34 @@ import { AddTransactionModal } from './components/AddTransactionModal';
 
 function App() {
   const fetchAccountsAndBalance = useAppStore(state => state.fetchAccountsAndBalance);
+  const setQuickAddOpen = useAppStore(state => state.setQuickAddOpen);
 
   useEffect(() => {
     fetchAccountsAndBalance();
   }, [fetchAccountsAndBalance]);
+
+  useEffect(() => {
+  const handleKeyDown = (e : any) => {
+    const isMac = navigator.platform.toUpperCase().includes("MAC");
+
+    const modifierPressed = isMac ? e.metaKey : e.ctrlKey;
+
+    if (
+      modifierPressed &&
+      e.shiftKey &&
+      e.key === "Enter" &&
+      !["INPUT", "TEXTAREA"].includes(e.target.tagName)
+    ) {
+      e.preventDefault();
+      setQuickAddOpen(true);
+    }
+  };
+
+  window.addEventListener("keydown", handleKeyDown);
+
+  return () => window.removeEventListener("keydown", handleKeyDown);
+}, [setQuickAddOpen]);
+
 
   return (
     <Router>

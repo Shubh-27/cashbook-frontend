@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../store';
 import { api } from '../api';
 import { Zap } from 'lucide-react';
+import { Input } from './ui/input';
 
 export function QuickAdd() {
   const [input, setInput] = useState('');
@@ -65,14 +66,13 @@ export function QuickAdd() {
 
   return (
     <div className="relative group flex items-center">
-      <Zap className="absolute left-3 w-4 h-4 text-amber-500" />
-      <input
-        type="text"
+      <Zap className="absolute left-3 w-4 h-4 text-amber-500 z-10" />
+      <Input
         placeholder="Quick Add (e.g. '500 tea')"
         value={input}
         onChange={e => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
-        className="w-64 bg-amber-50/50 border border-amber-200/50 text-amber-900 rounded-xl py-2 pl-9 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:bg-white transition-all placeholder:text-amber-500/70"
+        className="w-64 bg-amber-50/50 border-amber-200/50 text-amber-900 rounded-xl pl-9 focus:bg-white"
       />
     </div>
   );

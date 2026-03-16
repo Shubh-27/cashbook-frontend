@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useAppStore } from '../../store';
 import { api } from '../../api';
 import { Pencil, Trash2, Check, X, Plus, Building } from 'lucide-react';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
 
 export function AccountManager() {
   const accounts = useAppStore(state => state.accounts);
@@ -50,12 +52,12 @@ export function AccountManager() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Account Manager</h1>
-        <button
+        <Button
           onClick={() => { resetForm(); setIsAdding(true); }}
-          className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-800 transition-all shadow-sm"
+          className="rounded-xl font-medium"
         >
           <Plus className="w-4 h-4" /> Add Account
-        </button>
+        </Button>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -72,18 +74,18 @@ export function AccountManager() {
             {isAdding && (
               <tr className="bg-teal-50/30">
                 <td className="px-6 py-3">
-                  <input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Savings" className="w-full border border-slate-200 rounded px-3 py-1.5 focus:outline-teal-500" />
+                  <Input autoFocus value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Savings" className="h-9" />
                 </td>
                 <td className="px-6 py-3">
-                  <input value={bankName} onChange={e => setBankName(e.target.value)} placeholder="e.g. HDFC" className="w-full border border-slate-200 rounded px-3 py-1.5 focus:outline-teal-500" />
+                  <Input value={bankName} onChange={e => setBankName(e.target.value)} placeholder="e.g. HDFC" className="h-9" />
                 </td>
                 <td className="px-6 py-3">
-                  <input value={accNumber} onChange={e => setAccNumber(e.target.value)} placeholder="Last 4 digits" className="w-full border border-slate-200 rounded px-3 py-1.5 focus:outline-teal-500" />
+                  <Input value={accNumber} onChange={e => setAccNumber(e.target.value)} placeholder="Last 4 digits" className="h-9" />
                 </td>
                 <td className="px-6 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">
-                    <button onClick={handleSave} className="p-1.5 text-teal-600 hover:bg-teal-100 rounded-lg"><Check className="w-5 h-5" /></button>
-                    <button onClick={resetForm} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+                    <Button variant="ghost" size="icon" onClick={handleSave} className="text-teal-600 hover:text-teal-700 hover:bg-teal-100"><Check className="w-5 h-5" /></Button>
+                    <Button variant="ghost" size="icon" onClick={resetForm} className="text-slate-400 hover:bg-slate-100"><X className="w-5 h-5" /></Button>
                   </div>
                 </td>
               </tr>
@@ -94,18 +96,18 @@ export function AccountManager() {
                 return (
                   <tr key={acc.account_sid} className="bg-teal-50/30">
                     <td className="px-6 py-3">
-                      <input value={name} onChange={e => setName(e.target.value)} className="w-full border border-slate-200 rounded px-3 py-1.5 focus:outline-teal-500" />
+                      <Input value={name} onChange={e => setName(e.target.value)} className="h-9" />
                     </td>
                     <td className="px-6 py-3">
-                      <input value={bankName} onChange={e => setBankName(e.target.value)} className="w-full border border-slate-200 rounded px-3 py-1.5 focus:outline-teal-500" />
+                      <Input value={bankName} onChange={e => setBankName(e.target.value)} className="h-9" />
                     </td>
                     <td className="px-6 py-3">
-                      <input value={accNumber} onChange={e => setAccNumber(e.target.value)} className="w-full border border-slate-200 rounded px-3 py-1.5 focus:outline-teal-500" />
+                      <Input value={accNumber} onChange={e => setAccNumber(e.target.value)} className="h-9" />
                     </td>
                     <td className="px-6 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={handleSave} className="p-1.5 text-teal-600 hover:bg-teal-100 rounded-lg"><Check className="w-5 h-5" /></button>
-                        <button onClick={resetForm} className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg"><X className="w-5 h-5" /></button>
+                        <Button variant="ghost" size="icon" onClick={handleSave} className="text-teal-600 hover:text-teal-700 hover:bg-teal-100"><Check className="w-5 h-5" /></Button>
+                        <Button variant="ghost" size="icon" onClick={resetForm} className="text-slate-400 hover:bg-slate-100"><X className="w-5 h-5" /></Button>
                       </div>
                     </td>
                   </tr>
@@ -121,8 +123,8 @@ export function AccountManager() {
                   <td className="px-6 py-4 text-slate-600">{acc.account_number ? `****${acc.account_number.toString().slice(-4)}` : '-'}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleEdit(acc)} className="p-1.5 text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
-                      <button onClick={() => handleDelete(acc.account_sid)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(acc)} className="text-slate-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.account_sid)} className="text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>

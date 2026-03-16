@@ -1,6 +1,8 @@
 import { Search, Plus } from 'lucide-react';
 import { useAppStore } from '../store';
 import { QuickAdd } from './QuickAdd';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
 
 export function Topbar() {
   const setQuickAddOpen = useAppStore(state => state.setQuickAddOpen);
@@ -12,13 +14,12 @@ export function Topbar() {
       
       <div className="flex-1 max-w-xl">
         <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors" />
-          <input 
-            type="text" 
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors z-10" />
+          <Input 
             placeholder="Search transactions..."
             value={globalSearch}
             onChange={(e) => setGlobalSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-100/50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 focus:bg-white transition-all placeholder:text-slate-400"
+            className="w-full pl-10 bg-slate-100/50 border-slate-200 rounded-xl focus:bg-white"
           />
         </div>
       </div>
@@ -26,13 +27,13 @@ export function Topbar() {
       <div className="flex items-center gap-4 ml-8">
         <QuickAdd />
         
-        <button 
+        <Button 
           onClick={() => setQuickAddOpen(true)}
-          className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-800 hover:shadow-md transition-all active:scale-95"
+          className="rounded-xl font-medium"
         >
           <Plus className="w-4 h-4" />
           New Transaction
-        </button>
+        </Button>
       </div>
 
     </div>

@@ -61,9 +61,10 @@ export const api = {
     });
     return res.json();
   },
-  getTransactions: async (options: { accountId?: string, search?: string, page?: number, limit?: number }) => {
+  getTransactions: async (options: { accountId?: string, descriptionSid?: string, search?: string, page?: number, limit?: number }) => {
     const query = new URLSearchParams();
     if (options.accountId) query.append('accountId', options.accountId);
+    if (options.descriptionSid) query.append('descriptionSid', options.descriptionSid);
     if (options.search) query.append('search', options.search);
     if (options.page) query.append('page', options.page.toString());
     if (options.limit) query.append('limit', options.limit.toString());
@@ -91,10 +92,6 @@ export const api = {
     const res = await fetch(`${API_URL}/transactions/${sid}?accountSid=${accountSid}`, {
       method: 'DELETE'
     });
-    return res.json();
-  },
-  seedData: async () => {
-    const res = await fetch(`${API_URL}/seed`, { method: 'POST' });
     return res.json();
   },
   exportDb: async () => {
