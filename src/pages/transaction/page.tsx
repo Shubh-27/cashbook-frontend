@@ -9,9 +9,12 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import type { Transaction, Description, VwTransactionList, FilterRequest } from '../../types';
-import { format, parseISO } from 'date-fns';
-import { Pencil, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
+import { Pencil, Trash2, ArrowLeft, ArrowRight, ArrowUpDown, ArrowUp, ArrowDown, Search, Download } from 'lucide-react';
 import { Button } from '../../components/ui/button';
+import { DateRangePicker } from '../../components/DateRangePicker';
+import type { DateRange } from '../../utils/date';
+import { presets, formatDateForPayload } from '../../utils/date';
 import {
   Select,
   SelectContent,
@@ -29,19 +32,48 @@ import {
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
+import { Checkbox } from '../../components/ui/checkbox';
+
+import { useSearchParams } from 'react-router-dom';
 
 const columnHelper = createColumnHelper<VwTransactionList>();
 
 export function Transaction() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const open = useAppStore(state => state.quickAddOpen);
   const accounts = useAppStore(state => state.accounts);
-  const selectedAccountSid = useAppStore(state => state.selectedAccountSid);
-  const setSelectedAccount = useAppStore(state => state.setSelectedAccount);
-  const globalSearch = useAppStore(state => state.globalSearch);
   const fetchAccounts = useAppStore(state => state.fetchAccounts);
 
+  const selectedAccountSid = searchParams.get('account_sid') || 'all';
+  const selectedDescriptionSid = searchParams.get('description_sid') || 'all';
+  const search = searchParams.get('search') || '';
+  const startDateParam = searchParams.get('start_date');
+  const endDateParam = searchParams.get('end_date');
+
+  const dateRange = useMemo<DateRange | null>(() => {
+    if (startDateParam && endDateParam) {
+      const from = new Date(startDateParam);
+      const to = new Date(endDateParam);
+      if (isValid(from) && isValid(to)) {
+        return { from, to };
+      }
+    }
+    return null;
+  }, [startDateParam, endDateParam]);
+
+  // Set default FY on mount if no dates provided
+  useEffect(() => {
+    if (!startDateParam && !endDateParam) {
+      const defaultFY = presets.currentFY();
+      setSearchParams(prev => {
+        prev.set('start_date', defaultFY.from.toISOString());
+        prev.set('end_date', defaultFY.to.toISOString());
+        return prev;
+      }, { replace: true });
+    }
+  }, []); // Only run on mount
+
   const [descriptions, setDescriptions] = useState<Description[]>([]);
-  const [selectedDescriptionSid, setSelectedDescriptionSid] = useState<string>('all');
   const [data, setData] = useState<VwTransactionList[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -49,6 +81,15 @@ export function Transaction() {
 
   const [editingTx, setEditingTx] = useState<VwTransactionList | null>(null);
   const [deleteTargetTx, setDeleteTargetTx] = useState<VwTransactionList | null>(null);
+
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportType, setExportType] = useState<'excel' | 'csv'>('excel');
+  const [separateSheets, setSeparateSheets] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [excelName, setExcelName] = useState('');
+
+  const [sortBy, setSortBy] = useState<string>('TransactionDate');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const loadData = useCallback(async () => {
     try {
@@ -62,12 +103,21 @@ export function Transaction() {
         filters.push({ key: 'DescriptionSID', condition: 'equals', value: selectedDescriptionSid });
       }
 
+      if (dateRange) {
+        filters.push({
+          key: 'TransactionDate',
+          condition: 'between',
+          from: formatDateForPayload(dateRange.from),
+          to: formatDateForPayload(dateRange.to)
+        });
+      }
+
       const res = await api.listTransactions({
-        search: globalSearch,
+        search,
         page,
         page_size: limit,
-        sort_by: 'TransactionDate',
-        sort_order: 'desc',
+        sort_by: sortBy,
+        sort_order: sortOrder,
         filters
       });
       setData(res.data);
@@ -75,11 +125,11 @@ export function Transaction() {
     } catch (e) {
       console.error(e);
     }
-  }, [selectedAccountSid, selectedDescriptionSid, globalSearch, page]);
+  }, [selectedAccountSid, selectedDescriptionSid, search, page, sortBy, sortOrder, dateRange]);
 
   useEffect(() => {
     if (open) return;
-    api.listDescriptions({ page: 1, page_size: 1000 }).then(res => setDescriptions(res.data as any));
+    api.listDescriptions({ page: 1, page_size: -1 }).then(res => setDescriptions(res.data as any));
   }, [open]);
 
   useEffect(() => {
@@ -89,10 +139,10 @@ export function Transaction() {
     return () => window.removeEventListener('transaction-added', handleAdd);
   }, [loadData]);
 
-  // Reset page when search or account/description changes
+  // Reset page when search or filters change
   useEffect(() => {
     setPage(1);
-  }, [selectedAccountSid, selectedDescriptionSid, globalSearch]);
+  }, [selectedAccountSid, selectedDescriptionSid, search, dateRange]);
 
   const handleDelete = async () => {
     if (!deleteTargetTx) return;
@@ -100,6 +150,54 @@ export function Transaction() {
     setDeleteTargetTx(null);
     loadData();
     fetchAccounts();
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const filters: FilterRequest[] = [];
+      if (selectedAccountSid && selectedAccountSid !== 'all') {
+        filters.push({ key: 'AccountSID', condition: 'equals', value: selectedAccountSid });
+      }
+      if (selectedDescriptionSid && selectedDescriptionSid !== 'all') {
+        filters.push({ key: 'DescriptionSID', condition: 'equals', value: selectedDescriptionSid });
+      }
+      if (dateRange) {
+        filters.push({
+          key: 'TransactionDate',
+          condition: 'between',
+          from: formatDateForPayload(dateRange.from),
+          to: formatDateForPayload(dateRange.to)
+        });
+        // We also pass type: 'date' so backend properly calculates FY strings
+        filters.push({
+          type: 'date',
+          key: 'TransactionDate',
+          condition: 'between',
+          from: formatDateForPayload(dateRange.from),
+          to: formatDateForPayload(dateRange.to)
+        });
+      }
+
+      await api.exportTransactions({
+        search,
+        page: 1,
+        page_size: limit,
+        sort_by: sortBy,
+        sort_order: sortOrder,
+        export_type: exportType,
+        separate_sheets: separateSheets,
+        account_sid: selectedAccountSid && selectedAccountSid !== 'all' ? selectedAccountSid : null,
+        description_sid: selectedDescriptionSid && selectedDescriptionSid !== 'all' ? selectedDescriptionSid : null,
+        excel_name: excelName.trim(),
+        filters
+      });
+      setExportModalOpen(false);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleEditSave = async (e: React.FormEvent) => {
@@ -129,6 +227,10 @@ export function Transaction() {
       header: 'DATE',
       cell: info => <span className="font-medium">{format(parseISO(info.getValue()), 'dd MMM yyyy')}</span>,
     }),
+    columnHelper.accessor('account_name', {
+      header: 'ACCOUNT',
+      cell: info => <span className="text-slate-800 font-medium">{info.getValue() ?? '-'}</span>,
+    }),
     columnHelper.accessor('description_name', {
       header: 'DESCRIPTION',
       cell: info => <span className="text-slate-800 font-medium">{info.getValue() ?? '-'}</span>,
@@ -155,7 +257,37 @@ export function Transaction() {
         </div>
       ),
     })
-  ], [page, limit]);
+  ], [page, limit, sortBy, sortOrder]);
+
+  const handleSort = (columnId: string) => {
+    let backendField = columnId;
+    // Map column IDs to backend field names if they differ
+    if (columnId === 'transaction_date') backendField = 'TransactionDate';
+    if (columnId === 'account_name') backendField = 'AccountName';
+    if (columnId === 'description_name') backendField = 'DescriptionName';
+    if (columnId === 'debit') backendField = 'Debit';
+    if (columnId === 'credit') backendField = 'Credit';
+
+    if (sortBy === backendField) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(backendField);
+      setSortOrder('asc');
+    }
+  };
+
+  const getSortIcon = (columnId: string) => {
+    let backendField = columnId;
+    if (columnId === 'transaction_date') backendField = 'TransactionDate';
+    if (columnId === 'description_name') backendField = 'DescriptionName';
+    if (columnId === 'debit') backendField = 'Debit';
+    if (columnId === 'credit') backendField = 'Credit';
+
+    if (sortBy !== backendField) return <ArrowUpDown className="w-3.5 h-3.5 ml-1.5 text-slate-300" />;
+    return sortOrder === 'asc' ?
+      <ArrowUp className="w-3.5 h-3.5 ml-1.5 text-teal-600" /> :
+      <ArrowDown className="w-3.5 h-3.5 ml-1.5 text-teal-600" />;
+  };
 
   const table = useReactTable({
     data,
@@ -167,58 +299,140 @@ export function Transaction() {
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300 h-full">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Transaction View</h1>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <Label className="text-sm font-medium text-slate-500">Account:</Label>
+      <div className="flex flex-wrap items-center gap-3">
+
+        <h1 className="text-2xl font-bold text-slate-800 shrink-0">Transaction View</h1>
+
+        <div className="flex-1 min-w-0" />
+
+        <Button
+          variant="outline"
+          onClick={() => setExportModalOpen(true)}
+          className="shrink-0 h-9 rounded-xl border-slate-200 text-slate-600 hover:text-teal-600 hover:bg-teal-50"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Export
+        </Button>
+
+        <div className="relative group w-56 shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors z-10" />
+          <Input
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => {
+              const val = e.target.value;
+              setSearchParams(prev => {
+                if (val) prev.set('search', val);
+                else prev.delete('search');
+                return prev;
+              });
+            }}
+            className="w-full pl-10 bg-white border-slate-200 rounded-xl focus:bg-white h-9"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-10 gap-y-2">
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
+              Date Range:
+            </Label>
+            <DateRangePicker
+              range={dateRange}
+              onChange={(newRange) => {
+                setSearchParams(prev => {
+                  if (newRange) {
+                    prev.set('start_date', newRange.from.toISOString());
+                    prev.set('end_date', newRange.to.toISOString());
+                  } else {
+                    prev.delete('start_date');
+                    prev.delete('end_date');
+                  }
+                  return prev;
+                });
+              }}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
+              Account:
+            </Label>
             <Select
-              value={selectedAccountSid || 'all'}
-              onValueChange={setSelectedAccount}
+              value={selectedAccountSid}
+              onValueChange={(val) => {
+                setSearchParams(prev => {
+                  if (val && val !== 'all') prev.set('account_sid', val);
+                  else prev.delete('account_sid');
+                  return prev;
+                });
+              }}
             >
-              <SelectTrigger className="w-[180px] bg-white h-9">
+              <SelectTrigger className="w-[160px] bg-white h-9 border-slate-200">
                 <SelectValue placeholder="All Accounts" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Accounts</SelectItem>
                 {accounts.map(acc => (
-                  <SelectItem key={acc.account_sid} value={acc.account_sid}>{acc.account_name}</SelectItem>
+                  <SelectItem key={acc.account_sid} value={acc.account_sid}>
+                    {acc.account_name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Label className="text-sm font-medium text-slate-500">Description:</Label>
+          <div className="flex items-center gap-2 shrink-0">
+            <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
+              Description:
+            </Label>
             <Select
               value={selectedDescriptionSid}
-              onValueChange={setSelectedDescriptionSid}
+              onValueChange={(val) => {
+                setSearchParams(prev => {
+                  if (val && val !== 'all') prev.set('description_sid', val);
+                  else prev.delete('description_sid');
+                  return prev;
+                });
+              }}
             >
-              <SelectTrigger className="w-[180px] bg-white h-9">
+              <SelectTrigger className="w-[160px] bg-white h-9 border-slate-200">
                 <SelectValue placeholder="All Descriptions" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Descriptions</SelectItem>
                 {descriptions.map(desc => (
-                  <SelectItem key={desc.description_sid} value={desc.description_sid}>{desc.description_name}</SelectItem>
+                  <SelectItem key={desc.description_sid} value={desc.description_sid}>
+                    {desc.description_name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+
         </div>
       </div>
-
       <div className="bg-white border border-slate-200 shadow-sm rounded-2xl flex-1 flex flex-col overflow-hidden">
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
               {table.getHeaderGroups().map(headerGroup => (
                 <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <th key={header.id} className="px-6 py-4 font-semibold text-slate-500 uppercase tracking-wider text-xs">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                    </th>
-                  ))}
+                  {headerGroup.headers.map(header => {
+                    const isSortable = ['transaction_date', 'account_name', 'description_name', 'debit', 'credit'].includes(header.id);
+                    return (
+                      <th
+                        key={header.id}
+                        className={`px-6 py-4 font-semibold text-slate-500 uppercase tracking-wider text-xs ${isSortable ? 'cursor-pointer hover:bg-slate-100 transition-colors' : ''}`}
+                        onClick={isSortable ? () => handleSort(header.id) : undefined}
+                      >
+                        <div className="flex items-center">
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {isSortable && getSortIcon(header.id)}
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               ))}
             </thead>
@@ -355,6 +569,95 @@ export function Transaction() {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Export Modal */}
+      <Dialog open={exportModalOpen} onOpenChange={setExportModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Transactions</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-6 py-4">
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-slate-700">Format</Label>
+              <Select value={exportType} onValueChange={(val: 'excel' | 'csv') => setExportType(val)}>
+                <SelectTrigger className="w-full h-10 border-slate-200 focus:ring-teal-500">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="excel">Excel (.xlsx)</SelectItem>
+                  <SelectItem value="csv">CSV (.csv)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-sm font-semibold text-slate-700">File Name (Optional)</Label>
+              <Input
+                placeholder="Custom file name (e.g. My_Export)"
+                value={excelName}
+                onChange={(e) => setExcelName(e.target.value)}
+                className="h-10 border-slate-200 focus-visible:ring-teal-500"
+              />
+            </div>
+
+            {exportType === 'excel' && (
+              <div className="flex items-start space-x-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <Checkbox
+                  id="separate-sheets"
+                  checked={separateSheets}
+                  onCheckedChange={(checked) => setSeparateSheets(checked as boolean)}
+                  className="mt-1 data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
+                />
+                <div className="space-y-1 leading-none">
+                  <label
+                    htmlFor="separate-sheets"
+                    className="text-sm font-medium text-slate-700 cursor-pointer"
+                  >
+                    Separate Sheets
+                  </label>
+                  <p className="text-xs text-slate-500">
+                    If multiple accounts are exported, group them into their own individual sheets.
+                  </p>
+                </div>
+              </div>
+            )}
+            {exportType === 'csv' && (
+              <p className="text-xs text-slate-500 italic bg-amber-50 text-amber-700 p-3 rounded-xl border border-amber-100">
+                CSV formatting does not support grouping features or multiple sheets. Data will be flattened.
+              </p>
+            )}
+            {selectedAccountSid !== 'all' && exportType === 'excel' && (
+               <p className="text-xs text-slate-500 italic bg-blue-50 text-blue-700 p-3 rounded-xl border border-blue-100">
+                 Note: Exporting a single selected account will naturally only use one sheet.
+               </p>
+            )}
+          </div>
+
+          <DialogFooter className="sm:justify-end gap-3 pt-4 border-t">
+            <Button variant="ghost" onClick={() => setExportModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleExport} 
+              disabled={isExporting}
+              className="bg-teal-600 hover:bg-teal-700 text-white"
+            >
+              {isExporting ? (
+                <>
+                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                   </svg>
+                   Exporting...
+                </>
+              ) : (
+                'Download File'
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

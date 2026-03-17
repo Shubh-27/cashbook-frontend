@@ -5,12 +5,10 @@ import { Button } from '../../components/ui/button';
 
 export function Dashboard() {
   const accounts = useAppStore(state => state.accounts);
-  const setSelectedAccount = useAppStore(state => state.setSelectedAccount);
   const navigate = useNavigate();
 
   const handleAccountClick = (sid: string) => {
-    setSelectedAccount(sid);
-    navigate('/transaction');
+    navigate(`/transaction?account_sid=${sid}`);
   };
 
   const getIcon = (idx: number) => {

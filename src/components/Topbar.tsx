@@ -11,19 +11,9 @@ export function Topbar() {
   return (
     <div className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200 flex flex-shrink-0 items-center justify-between px-8 z-20 sticky top-0">
 
-      <div className="flex-1 max-w-xl">
-        <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors z-10" />
-          <Input
-            placeholder="Search transactions..."
-            value={globalSearch}
-            onChange={(e) => setGlobalSearch(e.target.value)}
-            className="w-full pl-10 bg-slate-100/50 border-slate-200 rounded-xl focus:bg-white"
-          />
-        </div>
-      </div>
+      <div className="flex-1" />
 
-      <div className="flex items-center gap-4 ml-8">
+      <div className="flex items-center gap-4">
         <Button
           onClick={() => setQuickAddOpen(true)}
           className="rounded-xl font-medium"

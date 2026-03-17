@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { useAppStore } from '../store';
 import { api } from '../api';
+import { rules, validateField, ValidationError } from '../utils/validation';
 import {
   Dialog,
   DialogContent,
@@ -53,17 +54,31 @@ export function AddTransactionModal() {
   const [notes, setNotes] = useState('');
   const [descriptionsList, setDescriptionsList] = useState<{ description_sid: string, description_name: string }[]>([]);
   const [openCombobox, setOpenCombobox] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string | null>>({});
+
+  const validationRules = {
+    account: [rules.required('Please select an account')],
+    date: [rules.required('Transaction date is required')],
+    amount: [rules.required('Amount is required'), rules.minAmount(0.01, 'Amount must be greater than 0')]
+  };
 
   useEffect(() => {
     if (open) {
-      if (accounts.length > 0 && !accountSid) {
+      setDescription('');
+      setAmount('');
+      setNotes('');
+      setErrors({});
+      setDate(new Date().toISOString().split('T')[0]);
+      setType('DEBIT');
+
+      if (accounts.length > 0) {
         setAccountSid(accounts[0].account_sid);
       }
       api.getDescriptions().then(res => {
         setDescriptionsList(res);
       }).catch(console.error);
     }
-  }, [open, accounts, accountSid]);
+  }, [open, accounts]);
 
   useKeyboardShortcut('mod+enter', () => {
     if (open) {
@@ -73,34 +88,57 @@ export function AddTransactionModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!accountSid || !amount) return;
+    
+    const newErrors = {
+      account_sid: validateField(accountSid, validationRules.account),
+      transaction_date: validateField(date, validationRules.date),
+      amount: validateField(amount, validationRules.amount)
+    };
 
-    const val = parseFloat(amount);
-    const dateObj = new Date(date);
-    const currentDate = new Date();
-    dateObj.setHours(currentDate.getHours(), currentDate.getMinutes(), currentDate.getSeconds());
+    if (newErrors.account_sid || newErrors.transaction_date || newErrors.amount) {
+      setErrors(newErrors);
+      return;
+    }
 
-    const matchedDesc = descriptionsList.find(d => d.description_name.toLowerCase() === description.toLowerCase());
+    try {
+      const val = parseFloat(amount);
+      const dateObj = new Date(date);
+      const currentDate = new Date();
+      dateObj.setHours(currentDate.getHours(), currentDate.getMinutes(), currentDate.getSeconds());
 
-    await api.addTransaction({
-      account_sid: accountSid,
-      transaction_date: dateObj.toISOString(),
-      description_name: description,
-      description_sid: matchedDesc ? matchedDesc.description_sid : '',
-      debit: type === 'DEBIT' ? val : 0,
-      credit: type === 'CREDIT' ? val : 0,
-      notes
-    });
+      const matchedDesc = descriptionsList.find(d => d.description_name.toLowerCase() === description.toLowerCase());
 
-    fetchAccounts();
-    window.dispatchEvent(new Event('transaction-added'));
+      await api.addTransaction({
+        account_sid: accountSid,
+        transaction_date: dateObj.toISOString(),
+        description_name: description,
+        description_sid: matchedDesc ? matchedDesc.description_sid : '',
+        debit: type === 'DEBIT' ? val : 0,
+        credit: type === 'CREDIT' ? val : 0,
+        notes
+      });
 
-    setDescription('');
-    setAmount('');
-    setNotes('');
+      fetchAccounts();
+      window.dispatchEvent(new Event('transaction-added'));
 
-    if (!fastEntry) {
-      setOpen(false);
+      setDescription('');
+      setAmount('');
+      setNotes('');
+      setErrors({});
+
+      if (!fastEntry) {
+        setOpen(false);
+      }
+    } catch (e) {
+      if (e instanceof ValidationError) {
+        const backendErrors: Record<string, string | null> = {};
+        for (const key in e.errors) {
+          backendErrors[key] = e.errors[key][0];
+        }
+        setErrors(backendErrors);
+      } else {
+        console.error(e);
+      }
     }
   };
 
@@ -117,8 +155,8 @@ export function AddTransactionModal() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-5 py-4">
           <div className="space-y-2">
             <Label htmlFor="account">Account</Label>
-            <Select value={accountSid} onValueChange={setAccountSid}>
-              <SelectTrigger id="account" className="w-full h-10">
+            <Select value={accountSid} onValueChange={(val) => { setAccountSid(val); setErrors(prev => ({ ...prev, account_sid: null })); }}>
+              <SelectTrigger id="account" className={`w-full h-10 ${errors.account_sid ? 'border-red-500 focus:ring-red-500' : ''}`}>
                 <SelectValue placeholder="Select Account" />
               </SelectTrigger>
               <SelectContent>
@@ -129,6 +167,7 @@ export function AddTransactionModal() {
                 ))}
               </SelectContent>
             </Select>
+            {errors.account_sid && <p className="text-[11px] text-red-500 font-medium mt-1">{errors.account_sid}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -158,10 +197,11 @@ export function AddTransactionModal() {
                 id="date"
                 type="date"
                 value={date}
-                onChange={e => setDate(e.target.value)}
-                className="uppercase h-10"
+                onChange={e => { setDate(e.target.value); setErrors(prev => ({ ...prev, transaction_date: null })); }}
+                className={`uppercase h-10 ${errors.transaction_date ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 required
               />
+              {errors.transaction_date && <p className="text-[11px] text-red-500 font-medium mt-1">{errors.transaction_date}</p>}
             </div>
           </div>
 
@@ -172,13 +212,13 @@ export function AddTransactionModal() {
                 id="amount"
                 type="number"
                 step="0.01"
-                min="0"
                 value={amount}
-                onChange={e => setAmount(e.target.value)}
+                onChange={e => { setAmount(e.target.value); setErrors(prev => ({ ...prev, amount: null })); }}
                 placeholder="0.00"
-                className="h-10"
+                className={`h-10 ${errors.amount ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 required
               />
+              {errors.amount && <p className="text-[11px] text-red-500 font-medium mt-1">{errors.amount}</p>}
             </div>
             <div className="col-span-2 space-y-2 flex flex-col">
               <Label htmlFor="description">Description</Label>
