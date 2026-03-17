@@ -84,7 +84,7 @@ export function Transaction() {
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportType, setExportType] = useState<'excel' | 'csv'>('excel');
-  const [separateSheets, setSeparateSheets] = useState(false);
+  const [separateSheets, setSeparateSheets] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [excelName, setExcelName] = useState('');
 
@@ -300,21 +300,9 @@ export function Transaction() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300 h-full">
       <div className="flex flex-wrap items-center gap-3">
-
         <h1 className="text-2xl font-bold text-slate-800 shrink-0">Transaction View</h1>
-
         <div className="flex-1 min-w-0" />
-
-        <Button
-          variant="outline"
-          onClick={() => setExportModalOpen(true)}
-          className="shrink-0 h-9 rounded-xl border-slate-200 text-slate-600 hover:text-teal-600 hover:bg-teal-50"
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Export
-        </Button>
-
-        <div className="relative group w-56 shrink-0">
+        <div className="relative group w-100 shrink-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors z-10" />
           <Input
             placeholder="Search..."
@@ -330,86 +318,89 @@ export function Transaction() {
             className="w-full pl-10 bg-white border-slate-200 rounded-xl focus:bg-white h-9"
           />
         </div>
-
-        <div className="flex flex-wrap items-center gap-x-10 gap-y-2">
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
-              Date Range:
-            </Label>
-            <DateRangePicker
-              range={dateRange}
-              onChange={(newRange) => {
-                setSearchParams(prev => {
-                  if (newRange) {
-                    prev.set('start_date', newRange.from.toISOString());
-                    prev.set('end_date', newRange.to.toISOString());
-                  } else {
-                    prev.delete('start_date');
-                    prev.delete('end_date');
-                  }
-                  return prev;
-                });
-              }}
-            />
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
-              Account:
-            </Label>
-            <Select
-              value={selectedAccountSid}
-              onValueChange={(val) => {
-                setSearchParams(prev => {
-                  if (val && val !== 'all') prev.set('account_sid', val);
-                  else prev.delete('account_sid');
-                  return prev;
-                });
-              }}
-            >
-              <SelectTrigger className="w-[160px] bg-white h-9 border-slate-200">
-                <SelectValue placeholder="All Accounts" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Accounts</SelectItem>
-                {accounts.map(acc => (
-                  <SelectItem key={acc.account_sid} value={acc.account_sid}>
-                    {acc.account_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
-              Description:
-            </Label>
-            <Select
-              value={selectedDescriptionSid}
-              onValueChange={(val) => {
-                setSearchParams(prev => {
-                  if (val && val !== 'all') prev.set('description_sid', val);
-                  else prev.delete('description_sid');
-                  return prev;
-                });
-              }}
-            >
-              <SelectTrigger className="w-[160px] bg-white h-9 border-slate-200">
-                <SelectValue placeholder="All Descriptions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Descriptions</SelectItem>
-                {descriptions.map(desc => (
-                  <SelectItem key={desc.description_sid} value={desc.description_sid}>
-                    {desc.description_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
+        <Button
+          variant="outline"
+          onClick={() => setExportModalOpen(true)}
+          className="shrink-0 h-9 rounded-xl border-slate-200 text-slate-600 hover:text-teal-600 hover:bg-teal-50"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Export
+        </Button>
+      </div>
+      <div className="flex justify-end gap-x-10 gap-y-2">
+        <div className="flex items-center gap-2 shrink-0">
+          <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
+            Date Range:
+          </Label>
+          <DateRangePicker
+            range={dateRange}
+            onChange={(newRange) => {
+              setSearchParams(prev => {
+                if (newRange) {
+                  prev.set('start_date', newRange.from.toISOString());
+                  prev.set('end_date', newRange.to.toISOString());
+                } else {
+                  prev.delete('start_date');
+                  prev.delete('end_date');
+                }
+                return prev;
+              });
+            }}
+          />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
+            Account:
+          </Label>
+          <Select
+            value={selectedAccountSid}
+            onValueChange={(val) => {
+              setSearchParams(prev => {
+                if (val && val !== 'all') prev.set('account_sid', val);
+                else prev.delete('account_sid');
+                return prev;
+              });
+            }}
+          >
+            <SelectTrigger className="w-[250px] bg-white h-9 border-slate-200">
+              <SelectValue placeholder="All Accounts" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Accounts</SelectItem>
+              {accounts.map(acc => (
+                <SelectItem key={acc.account_sid} value={acc.account_sid}>
+                  {acc.account_name} {(acc.account_number)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
+            Description:
+          </Label>
+          <Select
+            value={selectedDescriptionSid}
+            onValueChange={(val) => {
+              setSearchParams(prev => {
+                if (val && val !== 'all') prev.set('description_sid', val);
+                else prev.delete('description_sid');
+                return prev;
+              });
+            }}
+          >
+            <SelectTrigger className="w-[200px] bg-white h-9 border-slate-200">
+              <SelectValue placeholder="All Descriptions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Descriptions</SelectItem>
+              {descriptions.map(desc => (
+                <SelectItem key={desc.description_sid} value={desc.description_sid}>
+                  {desc.description_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="bg-white border border-slate-200 shadow-sm rounded-2xl flex-1 flex flex-col overflow-hidden">
@@ -630,9 +621,9 @@ export function Transaction() {
               </p>
             )}
             {selectedAccountSid !== 'all' && exportType === 'excel' && (
-               <p className="text-xs text-slate-500 italic bg-blue-50 text-blue-700 p-3 rounded-xl border border-blue-100">
-                 Note: Exporting a single selected account will naturally only use one sheet.
-               </p>
+              <p className="text-xs text-slate-500 italic bg-blue-50 text-blue-700 p-3 rounded-xl border border-blue-100">
+                Note: Exporting a single selected account will naturally only use one sheet.
+              </p>
             )}
           </div>
 
@@ -640,18 +631,18 @@ export function Transaction() {
             <Button variant="ghost" onClick={() => setExportModalOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleExport} 
+            <Button
+              onClick={handleExport}
               disabled={isExporting}
               className="bg-teal-600 hover:bg-teal-700 text-white"
             >
               {isExporting ? (
                 <>
-                   <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                   </svg>
-                   Exporting...
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Exporting...
                 </>
               ) : (
                 'Download File'

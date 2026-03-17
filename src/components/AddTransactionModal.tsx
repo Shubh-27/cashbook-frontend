@@ -59,7 +59,8 @@ export function AddTransactionModal() {
   const validationRules = {
     account: [rules.required('Please select an account')],
     date: [rules.required('Transaction date is required')],
-    amount: [rules.required('Amount is required'), rules.minAmount(0.01, 'Amount must be greater than 0')]
+    amount: [rules.required('Amount is required'), rules.minAmount(0.01, 'Amount must be greater than 0')],
+    description: [rules.required('Description is required')]
   };
 
   useEffect(() => {
@@ -92,10 +93,11 @@ export function AddTransactionModal() {
     const newErrors = {
       account_sid: validateField(accountSid, validationRules.account),
       transaction_date: validateField(date, validationRules.date),
-      amount: validateField(amount, validationRules.amount)
+      amount: validateField(amount, validationRules.amount),
+      description: validateField(description, validationRules.description)
     };
 
-    if (newErrors.account_sid || newErrors.transaction_date || newErrors.amount) {
+    if (newErrors.account_sid || newErrors.transaction_date || newErrors.amount || newErrors.description) {
       setErrors(newErrors);
       return;
     }
@@ -221,7 +223,7 @@ export function AddTransactionModal() {
               {errors.amount && <p className="text-[11px] text-red-500 font-medium mt-1">{errors.amount}</p>}
             </div>
             <div className="col-span-2 space-y-2 flex flex-col">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
               <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                 <PopoverTrigger asChild>
                   <Button
@@ -229,7 +231,7 @@ export function AddTransactionModal() {
                     variant="outline"
                     role="combobox"
                     aria-expanded={openCombobox}
-                    className="w-full justify-between h-10 font-normal border-input"
+                    className={`w-full justify-between h-10 font-normal border-input ${errors.description ? 'border-red-500 ring-offset-background focus-visible:ring-red-500' : ''}`}
                   >
                     {description || "Select description..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -239,7 +241,10 @@ export function AddTransactionModal() {
                   <Command>
                     <CommandInput
                       placeholder="Search description..."
-                      onValueChange={(val) => setDescription(val)}
+                      onValueChange={(val) => {
+                        setDescription(val);
+                        setErrors(prev => ({ ...prev, description: null }));
+                      }}
                     />
                     <CommandList>
                       <CommandEmpty className="py-2 px-4 text-sm">
@@ -274,6 +279,7 @@ export function AddTransactionModal() {
                   </Command>
                 </PopoverContent>
               </Popover>
+              {errors.description && <p className="text-[11px] text-red-500 font-medium mt-1">{errors.description}</p>}
             </div>
           </div>
 
