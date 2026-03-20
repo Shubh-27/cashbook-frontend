@@ -101,6 +101,11 @@ export const api = {
     let filename = 'Cashbook_Export.xlsx';
     if (data.export_type === 'csv') filename = 'Cashbook_Export.csv';
     
+    const contentType = res.headers.get('content-type');
+    if (contentType === 'application/zip') {
+        filename = 'Cashbook_Export.zip';
+    }
+    
     const disposition = res.headers.get('content-disposition');
     if (disposition && disposition.indexOf('attachment') !== -1) {
         const filenameMatch = disposition.match(/filename="?([^";]+)"?/);
