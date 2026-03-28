@@ -9,6 +9,7 @@ import { AccountManager } from './pages/accounts/page';
 import { Descriptions } from './pages/descriptions/page';
 import { SettingsPage } from './pages/settings/page';
 import { AddTransactionModal } from './components/AddTransactionModal';
+import { UpdateNotifier } from './components/UpdateNotifier';
 
 function App() {
   const fetchAccounts = useAppStore(state => state.fetchAccounts);
@@ -35,6 +36,7 @@ function App() {
         </Route>
       </Routes>
       <AddTransactionModal />
+      <UpdateNotifier />
     </Router>
   );
 }
