@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useKeyboardShortcut } from '../hooks/useKeyboardShortcut';
 import { useAppStore } from '../store';
 import { api } from '../api';
@@ -55,6 +55,7 @@ export function AddTransactionModal() {
   const [descriptionsList, setDescriptionsList] = useState<{ description_sid: string, description_name: string }[]>([]);
   const [openCombobox, setOpenCombobox] = useState(false);
   const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const typeDebitRef = useRef<HTMLButtonElement>(null);
 
   const validationRules = {
     account: [rules.required('Please select an account')],
@@ -72,14 +73,25 @@ export function AddTransactionModal() {
       setDate(new Date().toISOString().split('T')[0]);
       setType('DEBIT');
 
-      if (accounts.length > 0) {
+      // Set default account if not set
+      if (accounts.length > 0 && !accountSid) {
         setAccountSid(accounts[0].account_sid);
       }
+      
       api.getDescriptions().then(res => {
         setDescriptionsList(res);
       }).catch(console.error);
     }
-  }, [open, accounts]);
+    // Only run when opening the modal
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  // Set default account when accounts become available while open
+  useEffect(() => {
+    if (open && accounts.length > 0 && !accountSid) {
+      setAccountSid(accounts[0].account_sid);
+    }
+  }, [open, accounts, accountSid]);
 
   useKeyboardShortcut('mod+enter', () => {
     if (open) {
@@ -126,9 +138,16 @@ export function AddTransactionModal() {
       setDescription('');
       setAmount('');
       setNotes('');
+      setType('DEBIT');
+      setDate(new Date().toISOString().split('T')[0]);
       setErrors({});
 
-      if (!fastEntry) {
+      if (fastEntry) {
+        // Return focus to Type buttons for fast keyboard entry
+        setTimeout(() => {
+          typeDebitRef.current?.focus();
+        }, 100);
+      } else {
         setOpen(false);
       }
     } catch (e) {
@@ -177,9 +196,10 @@ export function AddTransactionModal() {
               <Label>Type</Label>
               <div className="flex rounded-lg overflow-hidden border border-input p-1 bg-muted/30 h-10">
                 <button
+                  ref={typeDebitRef}
                   type="button"
                   onClick={() => setType('DEBIT')}
-                  className={`flex-1 text-sm font-medium rounded-md transition-all ${type === 'DEBIT' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`flex-1 text-sm font-medium rounded-md transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary ${type === 'DEBIT' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
                 >
                   Debit
                 </button>

@@ -10,7 +10,8 @@ import {
 } from '@tanstack/react-table';
 import type { Transaction, Description, VwTransactionList, FilterRequest } from '../../types';
 import { format, parseISO, isValid } from 'date-fns';
-import { Pencil, Trash2, ArrowLeft, ArrowRight, ArrowUpDown, ArrowUp, ArrowDown, Search, Download } from 'lucide-react';
+import { Pencil, Trash2, ArrowLeft, ArrowRight, ArrowUpDown, ArrowUp, ArrowDown, Search, Download, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { Button } from '../../components/ui/button';
 import { DateRangePicker } from '../../components/DateRangePicker';
 import type { DateRange } from '../../utils/date';
@@ -33,6 +34,19 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Checkbox } from '../../components/ui/checkbox';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '../../components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '../../components/ui/command';
 
 import { useSearchParams } from 'react-router-dom';
 
@@ -80,6 +94,7 @@ export function Transaction() {
   const limit = 50;
 
   const [editingTx, setEditingTx] = useState<VwTransactionList | null>(null);
+  const [openCombobox, setOpenCombobox] = useState(false);
   const [deleteTargetTx, setDeleteTargetTx] = useState<VwTransactionList | null>(null);
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -203,13 +218,17 @@ export function Transaction() {
   const handleEditSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingTx) return;
+
+    const amount = Math.max(editingTx.debit, editingTx.credit);
+    const type = editingTx.debit > 0 ? 'DEBIT' : (editingTx.credit > 0 ? 'CREDIT' : 'DEBIT');
+
     await api.updateTransaction(editingTx.transaction_sid, {
       account_sid: editingTx.account_sid,
       transaction_date: editingTx.transaction_date,
       description_sid: editingTx.description_sid,
       description_name: editingTx.description_name,
-      debit: editingTx.debit,
-      credit: editingTx.credit,
+      debit: type === 'DEBIT' ? amount : 0,
+      credit: type === 'CREDIT' ? amount : 0,
       notes: editingTx.notes
     });
     setEditingTx(null);
@@ -486,8 +505,50 @@ export function Transaction() {
           </DialogHeader>
 
           {editingTx && (
-            <form onSubmit={handleEditSave} className="flex flex-col gap-4 py-4">
+            <form onSubmit={handleEditSave} className="flex flex-col gap-5 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-account">Account</Label>
+                <Select value={editingTx.account_sid || undefined} onValueChange={(val) => setEditingTx({ ...editingTx, account_sid: val })}>
+                  <SelectTrigger id="edit-account" className="w-full h-10">
+                    <SelectValue placeholder="Select Account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map(acc => (
+                      <SelectItem key={acc.account_sid} value={acc.account_sid}>
+                        {acc.account_name} {acc.account_number ? `(${acc.account_number})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <div className="flex rounded-lg overflow-hidden border border-input p-1 bg-muted/30 h-10">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const amount = Math.max(editingTx.debit, editingTx.credit);
+                        setEditingTx({ ...editingTx, debit: amount, credit: 0 });
+                      }}
+                      className={`flex-1 text-sm font-medium rounded-md transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary ${editingTx.debit > 0 || (editingTx.debit === 0 && editingTx.credit === 0) ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      Debit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const amount = Math.max(editingTx.debit, editingTx.credit);
+                        setEditingTx({ ...editingTx, credit: amount, debit: 0 });
+                      }}
+                      className={`flex-1 text-sm font-medium rounded-md transition-all ${editingTx.credit > 0 ? 'bg-background shadow-sm text-teal-600' : 'text-muted-foreground hover:text-foreground'}`}
+                    >
+                      Credit
+                    </button>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="edit-date">Date</Label>
                   <Input
@@ -500,52 +561,99 @@ export function Transaction() {
                       newDate.setFullYear(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
                       setEditingTx({ ...editingTx, transaction_date: newDate.toISOString() });
                     }}
-                    className="h-10"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-description">Description</Label>
-                  <Input
-                    id="edit-description"
-                    type="text"
-                    value={editingTx.description_name ?? ''}
-                    onChange={e => setEditingTx({ ...editingTx, description_name: e.target.value, description_sid: null })}
-                    className="h-10"
+                    className="uppercase h-10"
+                    required
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-debit">Debit</Label>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-1 space-y-2">
+                  <Label htmlFor="edit-amount">Amount (₹)</Label>
                   <Input
-                    id="edit-debit"
+                    id="edit-amount"
                     type="number"
                     step="0.01"
-                    value={editingTx.debit ?? 0}
-                    onChange={e => setEditingTx({ ...editingTx, debit: parseFloat(e.target.value) || 0, credit: 0 })}
+                    value={Math.max(editingTx.debit, editingTx.credit) || ''}
+                    onChange={e => {
+                      const val = parseFloat(e.target.value) || 0;
+                      if (editingTx.credit > 0) {
+                        setEditingTx({ ...editingTx, credit: val, debit: 0 });
+                      } else {
+                        setEditingTx({ ...editingTx, debit: val, credit: 0 });
+                      }
+                    }}
+                    placeholder="0.00"
                     className="h-10"
+                    required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-credit">Credit</Label>
-                  <Input
-                    id="edit-credit"
-                    type="number"
-                    step="0.01"
-                    value={editingTx.credit ?? 0}
-                    onChange={e => setEditingTx({ ...editingTx, credit: parseFloat(e.target.value) || 0, debit: 0 })}
-                    className="h-10"
-                  />
+                <div className="col-span-2 space-y-2 flex flex-col">
+                  <Label htmlFor="edit-description">Description <span className="text-red-500">*</span></Label>
+                  <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        id="edit-description"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openCombobox}
+                        className="w-full justify-between h-10 font-normal border-input"
+                      >
+                        {editingTx.description_name || "Select description..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                      <Command>
+                        <CommandInput
+                          placeholder="Search description..."
+                          onValueChange={(val) => {
+                            setEditingTx({ ...editingTx, description_name: val, description_sid: '' });
+                          }}
+                        />
+                        <CommandList>
+                          <CommandEmpty className="py-2 px-4 text-sm">
+                            No description found.
+                            {editingTx.description_name && (
+                              <div className="mt-2 pt-2 border-t text-muted-foreground uppercase text-xs font-semibold">
+                                Will use: "{editingTx.description_name}"
+                              </div>
+                            )}
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {descriptions.map((desc) => (
+                              <CommandItem
+                                key={desc.description_sid}
+                                value={desc.description_name}
+                                onSelect={(currentValue) => {
+                                  setEditingTx({ ...editingTx, description_name: currentValue, description_sid: desc.description_sid });
+                                  setOpenCombobox(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    editingTx.description_name?.toLowerCase() === desc.description_name.toLowerCase() ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {desc.description_name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-notes">Notes</Label>
+                <Label htmlFor="edit-notes">Notes (Optional)</Label>
                 <Textarea
                   id="edit-notes"
                   value={editingTx.notes ?? ''}
                   onChange={e => setEditingTx({ ...editingTx, notes: e.target.value })}
+                  placeholder="Additional details..."
                   className="min-h-[80px] resize-none"
                 />
               </div>
