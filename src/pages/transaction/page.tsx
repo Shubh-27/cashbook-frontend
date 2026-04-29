@@ -33,7 +33,7 @@ import {
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
-import { Checkbox } from '../../components/ui/checkbox';
+
 import {
   Popover,
   PopoverContent,
@@ -58,7 +58,8 @@ export function Transaction() {
   const accounts = useAppStore(state => state.accounts);
   const fetchAccounts = useAppStore(state => state.fetchAccounts);
 
-  const selectedAccountSid = searchParams.get('account_sid') || 'all';
+  const selectedAccountSids = searchParams.getAll('account_sid');
+  const selectedAccountSidsStr = selectedAccountSids.join(',');
   const selectedDescriptionSid = searchParams.get('description_sid') || 'all';
   const search = searchParams.get('search') || '';
   const startDateParam = searchParams.get('start_date');
@@ -100,6 +101,8 @@ export function Transaction() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [exportType, setExportType] = useState<'excel' | 'csv'>('excel');
   const [separateSheets, setSeparateSheets] = useState(true);
+  const [mergeAccounts, setMergeAccounts] = useState(true);
+  const [mergeDescriptions, setMergeDescriptions] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [excelName, setExcelName] = useState('');
 
@@ -110,8 +113,8 @@ export function Transaction() {
     try {
       const filters: FilterRequest[] = [];
 
-      if (selectedAccountSid && selectedAccountSid !== 'all') {
-        filters.push({ key: 'AccountSID', condition: 'equals', value: selectedAccountSid });
+      if (selectedAccountSids.length > 0) {
+        filters.push({ key: 'AccountSID', condition: 'in', value: selectedAccountSids });
       }
 
       if (selectedDescriptionSid && selectedDescriptionSid !== 'all') {
@@ -140,7 +143,7 @@ export function Transaction() {
     } catch (e) {
       console.error(e);
     }
-  }, [selectedAccountSid, selectedDescriptionSid, search, page, sortBy, sortOrder, dateRange]);
+  }, [selectedAccountSidsStr, selectedDescriptionSid, search, page, sortBy, sortOrder, dateRange]);
 
   useEffect(() => {
     if (open) return;
@@ -154,10 +157,9 @@ export function Transaction() {
     return () => window.removeEventListener('transaction-added', handleAdd);
   }, [loadData]);
 
-  // Reset page when search or filters change
   useEffect(() => {
     setPage(1);
-  }, [selectedAccountSid, selectedDescriptionSid, search, dateRange]);
+  }, [selectedAccountSidsStr, selectedDescriptionSid, search, dateRange]);
 
   const handleDelete = async () => {
     if (!deleteTargetTx) return;
@@ -171,8 +173,8 @@ export function Transaction() {
     setIsExporting(true);
     try {
       const filters: FilterRequest[] = [];
-      if (selectedAccountSid && selectedAccountSid !== 'all') {
-        filters.push({ key: 'AccountSID', condition: 'equals', value: selectedAccountSid });
+      if (selectedAccountSids.length > 0) {
+        filters.push({ key: 'AccountSID', condition: 'in', value: selectedAccountSids });
       }
       if (selectedDescriptionSid && selectedDescriptionSid !== 'all') {
         filters.push({ key: 'DescriptionSID', condition: 'equals', value: selectedDescriptionSid });
@@ -202,7 +204,9 @@ export function Transaction() {
         sort_order: sortOrder,
         export_type: exportType,
         separate_sheets: separateSheets,
-        account_sid: selectedAccountSid && selectedAccountSid !== 'all' ? selectedAccountSid : null,
+        merge_accounts: selectedAccountSids.length > 1 ? mergeAccounts : false,
+        merge_descriptions: separateSheets ? mergeDescriptions : false,
+        account_sid: selectedAccountSids.length === 1 ? selectedAccountSids[0] : null,
         description_sid: selectedDescriptionSid && selectedDescriptionSid !== 'all' ? selectedDescriptionSid : null,
         excel_name: excelName.trim(),
         filters
@@ -371,28 +375,76 @@ export function Transaction() {
           <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
             Account:
           </Label>
-          <Select
-            value={selectedAccountSid}
-            onValueChange={(val) => {
-              setSearchParams(prev => {
-                if (val && val !== 'all') prev.set('account_sid', val);
-                else prev.delete('account_sid');
-                return prev;
-              });
-            }}
-          >
-            <SelectTrigger className="w-[250px] bg-white h-9 border-slate-200">
-              <SelectValue placeholder="All Accounts" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Accounts</SelectItem>
-              {accounts.map(acc => (
-                <SelectItem key={acc.account_sid} value={acc.account_sid}>
-                  {acc.account_name} {(acc.account_number)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-[250px] justify-between h-9 bg-white border-slate-200 hover:bg-slate-50 font-normal"
+              >
+                <span className="truncate">
+                  {selectedAccountSids.length === 0
+                    ? "All Accounts"
+                    : `${selectedAccountSids.length} Account${selectedAccountSids.length > 1 ? 's' : ''} Selected`}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[250px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search account..." />
+                <CommandList>
+                  <CommandEmpty>No account found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => {
+                        setSearchParams(prev => {
+                          prev.delete('account_sid');
+                          return prev;
+                        });
+                      }}
+                    >
+                      <div className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        selectedAccountSids.length === 0 ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible"
+                      )}>
+                        <Check className={cn("h-4 w-4")} />
+                      </div>
+                      All Accounts
+                    </CommandItem>
+                    {accounts.map(acc => {
+                      const isSelected = selectedAccountSids.includes(acc.account_sid);
+                      return (
+                        <CommandItem
+                          key={acc.account_sid}
+                          onSelect={() => {
+                            setSearchParams(prev => {
+                              const sids = prev.getAll('account_sid');
+                              prev.delete('account_sid');
+                              if (isSelected) {
+                                sids.filter(id => id !== acc.account_sid).forEach(id => prev.append('account_sid', id));
+                              } else {
+                                [...sids, acc.account_sid].forEach(id => prev.append('account_sid', id));
+                              }
+                              return prev;
+                            });
+                          }}
+                        >
+                          <div className={cn(
+                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                            isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible"
+                          )}>
+                            <Check className={cn("h-4 w-4")} />
+                          </div>
+                          {acc.account_name} {acc.account_number ? `(${acc.account_number})` : ''}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
@@ -703,24 +755,55 @@ export function Transaction() {
             </div>
 
             {exportType === 'excel' && (
-              <div className="flex items-start space-x-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <Checkbox
-                  id="separate-sheets"
-                  checked={separateSheets}
-                  onCheckedChange={(checked) => setSeparateSheets(checked as boolean)}
-                  className="mt-1 data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
-                />
-                <div className="space-y-1 leading-none">
-                  <label
-                    htmlFor="separate-sheets"
-                    className="text-sm font-medium text-slate-700 cursor-pointer"
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold text-slate-700">Sheet Layout</Label>
+                <div className="flex rounded-lg overflow-hidden border border-slate-200 p-1 bg-slate-50 h-10">
+                  <button
+                    type="button"
+                    onClick={() => setSeparateSheets(true)}
+                    className={`flex-1 text-sm font-medium rounded-md transition-all outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${separateSheets ? 'bg-white shadow-sm text-teal-700 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     Separate Sheets
-                  </label>
-                  <p className="text-xs text-slate-500">
-                    If multiple accounts are exported, group them into their own individual sheets.
-                  </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSeparateSheets(false)}
+                    className={`flex-1 text-sm font-medium rounded-md transition-all outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${!separateSheets ? 'bg-white shadow-sm text-teal-700 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Single Sheet
+                  </button>
                 </div>
+                <p className="text-xs text-slate-500 px-1">
+                  {separateSheets 
+                    ? "Groups accounts and descriptions into their own individual sheets or files." 
+                    : "Combines everything into one continuous sheet with separate tables."}
+                </p>
+              </div>
+            )}
+            {exportType === 'excel' && separateSheets && (
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold text-slate-700">Description Grouping</Label>
+                <div className="flex rounded-lg overflow-hidden border border-slate-200 p-1 bg-slate-50 h-10">
+                  <button
+                    type="button"
+                    onClick={() => setMergeDescriptions(false)}
+                    className={`flex-1 text-sm font-medium rounded-md transition-all outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${!mergeDescriptions ? 'bg-white shadow-sm text-teal-700 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Separate sheet
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMergeDescriptions(true)}
+                    className={`flex-1 text-sm font-medium rounded-md transition-all outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${mergeDescriptions ? 'bg-white shadow-sm text-teal-700 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Merge into one sheet
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 px-1">
+                  {mergeDescriptions
+                    ? 'All descriptions are combined into a single \"Descriptions\" sheet.'
+                    : 'Each description gets its own individual sheet.'}
+                </p>
               </div>
             )}
             {exportType === 'csv' && (
@@ -728,10 +811,47 @@ export function Transaction() {
                 CSV formatting does not support grouping features or multiple sheets. Data will be flattened.
               </p>
             )}
-            {selectedAccountSid !== 'all' && exportType === 'excel' && (
-              <p className="text-xs text-slate-500 italic bg-blue-50 text-blue-700 p-3 rounded-xl border border-blue-100">
-                Note: Exporting a single selected account will naturally only use one sheet.
-              </p>
+            {exportType === 'excel' && selectedAccountSids.length > 1 && (
+              <div className="space-y-3">
+                <Label className="text-sm font-semibold text-slate-700">Account Grouping</Label>
+                <div className="flex rounded-lg overflow-hidden border border-slate-200 p-1 bg-slate-50 h-10">
+                  <button
+                    type="button"
+                    onClick={() => setMergeAccounts(true)}
+                    className={`flex-1 text-sm font-medium rounded-md transition-all outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${mergeAccounts ? 'bg-white shadow-sm text-teal-700 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Merge into one file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMergeAccounts(false)}
+                    className={`flex-1 text-sm font-medium rounded-md transition-all outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${!mergeAccounts ? 'bg-white shadow-sm text-teal-700 border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    One file per account (.zip)
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 px-1">
+                  {mergeAccounts
+                    ? "All selected accounts are combined into a single Excel file."
+                    : "Each account gets its own Excel file, packaged into a ZIP archive."}
+                </p>
+              </div>
+            )}
+            {selectedAccountSids.length > 0 ? (
+              <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 space-y-1">
+                <p className="text-xs text-slate-700 font-medium">
+                  {selectedAccountSids.length} account{selectedAccountSids.length > 1 ? 's' : ''} selected for export:
+                </p>
+                <p className="text-xs text-slate-500 italic">
+                  {accounts.filter(a => selectedAccountSids.includes(a.account_sid)).map(a => {return `${a.account_name}(${a.account_number})`}).join(', ')}
+                </p>
+              </div>
+            ) : (
+              exportType === 'excel' && (
+                <p className="text-xs text-slate-500 italic bg-blue-50 text-blue-700 p-3 rounded-xl border border-blue-100">
+                  Note: All accounts will be exported.
+                </p>
+              )
             )}
           </div>
 
@@ -753,7 +873,9 @@ export function Transaction() {
                   Exporting...
                 </>
               ) : (
-                'Download File'
+                exportType === 'excel' && selectedAccountSids.length > 1 && !mergeAccounts
+                  ? 'Download ZIP'
+                  : 'Download File'
               )}
             </Button>
           </DialogFooter>

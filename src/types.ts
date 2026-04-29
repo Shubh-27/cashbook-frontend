@@ -32,7 +32,7 @@ export interface Transaction {
 // Generic Search & List Types
 export interface FilterRequest {
   key: string;
-  condition: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'between';
+  condition: 'equals' | 'contains' | 'greater_than' | 'less_than' | 'between' | 'in';
   value?: any;
   from?: any;
   to?: any;
