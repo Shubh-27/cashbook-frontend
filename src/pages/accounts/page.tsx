@@ -197,11 +197,11 @@ export function AccountManager() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-300 h-full">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-slate-800">Account Manager</h1>
+          <h1 className="text-2xl font-bold text-slate-800">Accounts</h1>
           <div className="relative group w-64 ml-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors z-10" />
             <Input
-              placeholder="Search accounts..."
+              placeholder="Search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 bg-white border-slate-200 rounded-xl focus:bg-white h-9"

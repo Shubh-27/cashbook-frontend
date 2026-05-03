@@ -260,7 +260,7 @@ export function AddTransactionModal() {
                 <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                   <Command>
                     <CommandInput
-                      placeholder="Search description..."
+                      placeholder="Search"
                       onValueChange={(val) => {
                         setDescription(val);
                         setErrors(prev => ({ ...prev, description: null }));

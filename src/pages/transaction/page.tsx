@@ -60,7 +60,8 @@ export function Transaction() {
 
   const selectedAccountSids = searchParams.getAll('account_sid');
   const selectedAccountSidsStr = selectedAccountSids.join(',');
-  const selectedDescriptionSid = searchParams.get('description_sid') || 'all';
+  const selectedDescriptionSids = searchParams.getAll('description_sid');
+  const selectedDescriptionSidsStr = selectedDescriptionSids.join(',');
   const search = searchParams.get('search') || '';
   const startDateParam = searchParams.get('start_date');
   const endDateParam = searchParams.get('end_date');
@@ -117,8 +118,8 @@ export function Transaction() {
         filters.push({ key: 'AccountSID', condition: 'in', value: selectedAccountSids });
       }
 
-      if (selectedDescriptionSid && selectedDescriptionSid !== 'all') {
-        filters.push({ key: 'DescriptionSID', condition: 'equals', value: selectedDescriptionSid });
+      if (selectedDescriptionSids.length > 0) {
+        filters.push({ key: 'DescriptionSID', condition: 'in', value: selectedDescriptionSids });
       }
 
       if (dateRange) {
@@ -143,7 +144,7 @@ export function Transaction() {
     } catch (e) {
       console.error(e);
     }
-  }, [selectedAccountSidsStr, selectedDescriptionSid, search, page, sortBy, sortOrder, dateRange]);
+  }, [selectedAccountSidsStr, selectedDescriptionSidsStr, search, page, sortBy, sortOrder, dateRange]);
 
   useEffect(() => {
     if (open) return;
@@ -159,7 +160,7 @@ export function Transaction() {
 
   useEffect(() => {
     setPage(1);
-  }, [selectedAccountSidsStr, selectedDescriptionSid, search, dateRange]);
+  }, [selectedAccountSidsStr, selectedDescriptionSidsStr, search, dateRange]);
 
   const handleDelete = async () => {
     if (!deleteTargetTx) return;
@@ -176,8 +177,8 @@ export function Transaction() {
       if (selectedAccountSids.length > 0) {
         filters.push({ key: 'AccountSID', condition: 'in', value: selectedAccountSids });
       }
-      if (selectedDescriptionSid && selectedDescriptionSid !== 'all') {
-        filters.push({ key: 'DescriptionSID', condition: 'equals', value: selectedDescriptionSid });
+      if (selectedDescriptionSids.length > 0) {
+        filters.push({ key: 'DescriptionSID', condition: 'in', value: selectedDescriptionSids });
       }
       if (dateRange) {
         filters.push({
@@ -207,7 +208,7 @@ export function Transaction() {
         merge_accounts: selectedAccountSids.length > 1 ? mergeAccounts : false,
         merge_descriptions: separateSheets ? mergeDescriptions : false,
         account_sid: selectedAccountSids.length === 1 ? selectedAccountSids[0] : null,
-        description_sid: selectedDescriptionSid && selectedDescriptionSid !== 'all' ? selectedDescriptionSid : null,
+        description_sid: selectedDescriptionSids.length === 1 ? selectedDescriptionSids[0] : null,
         excel_name: excelName.trim(),
         filters
       });
@@ -323,12 +324,12 @@ export function Transaction() {
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300 h-full">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold text-slate-800 shrink-0">Transaction View</h1>
+        <h1 className="text-2xl font-bold text-slate-800 shrink-0">Transactions</h1>
         <div className="flex-1 min-w-0" />
         <div className="relative group w-100 shrink-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors z-10" />
           <Input
-            placeholder="Search..."
+            placeholder="Search"
             value={search}
             onChange={(e) => {
               const val = e.target.value;
@@ -392,7 +393,7 @@ export function Transaction() {
             </PopoverTrigger>
             <PopoverContent className="w-[250px] p-0" align="start">
               <Command>
-                <CommandInput placeholder="Search account..." />
+                <CommandInput placeholder="Search" />
                 <CommandList>
                   <CommandEmpty>No account found.</CommandEmpty>
                   <CommandGroup>
@@ -450,28 +451,76 @@ export function Transaction() {
           <Label className="text-[10px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">
             Description:
           </Label>
-          <Select
-            value={selectedDescriptionSid}
-            onValueChange={(val) => {
-              setSearchParams(prev => {
-                if (val && val !== 'all') prev.set('description_sid', val);
-                else prev.delete('description_sid');
-                return prev;
-              });
-            }}
-          >
-            <SelectTrigger className="w-[200px] bg-white h-9 border-slate-200">
-              <SelectValue placeholder="All Descriptions" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Descriptions</SelectItem>
-              {descriptions.map(desc => (
-                <SelectItem key={desc.description_sid} value={desc.description_sid}>
-                  {desc.description_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                className="w-[200px] justify-between h-9 bg-white border-slate-200 hover:bg-slate-50 font-normal"
+              >
+                <span className="truncate">
+                  {selectedDescriptionSids.length === 0
+                    ? "All Descriptions"
+                    : `${selectedDescriptionSids.length} Selected`}
+                </span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[200px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Search" />
+                <CommandList>
+                  <CommandEmpty>No description found.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      onSelect={() => {
+                        setSearchParams(prev => {
+                          prev.delete('description_sid');
+                          return prev;
+                        });
+                      }}
+                    >
+                      <div className={cn(
+                        "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                        selectedDescriptionSids.length === 0 ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible"
+                      )}>
+                        <Check className={cn("h-4 w-4")} />
+                      </div>
+                      All Descriptions
+                    </CommandItem>
+                    {descriptions.map(desc => {
+                      const isSelected = selectedDescriptionSids.includes(desc.description_sid);
+                      return (
+                        <CommandItem
+                          key={desc.description_sid}
+                          onSelect={() => {
+                            setSearchParams(prev => {
+                              const sids = prev.getAll('description_sid');
+                              prev.delete('description_sid');
+                              if (isSelected) {
+                                sids.filter(id => id !== desc.description_sid).forEach(id => prev.append('description_sid', id));
+                              } else {
+                                [...sids, desc.description_sid].forEach(id => prev.append('description_sid', id));
+                              }
+                              return prev;
+                            });
+                          }}
+                        >
+                          <div className={cn(
+                            "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                            isSelected ? "bg-primary text-primary-foreground" : "opacity-50 [&_svg]:invisible"
+                          )}>
+                            <Check className={cn("h-4 w-4")} />
+                          </div>
+                          {desc.description_name}
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       <div className="bg-white border border-slate-200 shadow-sm rounded-2xl flex-1 flex flex-col overflow-hidden">
@@ -658,7 +707,7 @@ export function Transaction() {
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                       <Command>
                         <CommandInput
-                          placeholder="Search description..."
+                          placeholder="Search"
                           onValueChange={(val) => {
                             setEditingTx({ ...editingTx, description_name: val, description_sid: '' });
                           }}

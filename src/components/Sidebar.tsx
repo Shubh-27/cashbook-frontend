@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ReceiptText, Building2, FileText, Settings } from 'lucide-react';
+import { LayoutDashboard, Building2, FileText, Settings } from 'lucide-react';
+import { Logo } from './Logo';
 
 export function Sidebar() {
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Transaction', path: '/transaction', icon: ReceiptText },
+    { name: 'Transactions', path: '/transaction', icon: Logo },
     { name: 'Accounts', path: '/accounts', icon: Building2 },
     { name: 'Descriptions', path: '/descriptions', icon: FileText },
     { name: 'Settings', path: '/settings', icon: Settings },
@@ -14,7 +15,7 @@ export function Sidebar() {
     <div className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10">
       <div className="h-16 flex items-center px-6 border-b border-slate-100">
         <div className="flex items-center gap-2 text-teal-600 font-bold text-xl tracking-tight">
-          <ReceiptText className="w-6 h-6 stroke-[2.5]" />
+          <Logo className="w-6 h-6" />
           <span>CashBook</span>
         </div>
       </div>
