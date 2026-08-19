@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { useAppStore } from './store';
-import { Layout } from './components/Layout';
+import { Layout } from './components/layout';
 import { Dashboard } from './pages/dashboard/page';
-import { Transaction } from './pages/transaction/page';
+import { Transaction } from './pages/transactions/page';
 import { AccountManager } from './pages/accounts/page';
 import { Descriptions } from './pages/descriptions/page';
 import { SettingsPage } from './pages/settings/page';
@@ -13,11 +14,13 @@ import { UpdateNotifier } from './components/UpdateNotifier';
 
 function App() {
   const fetchAccounts = useAppStore(state => state.fetchAccounts);
+  const fetchDescriptions = useAppStore(state => state.fetchDescriptions);
   const setQuickAddOpen = useAppStore(state => state.setQuickAddOpen);
 
   useEffect(() => {
     fetchAccounts();
-  }, [fetchAccounts]);
+    fetchDescriptions();
+  }, [fetchAccounts, fetchDescriptions]);
 
   useKeyboardShortcut('mod+shift+enter', () => {
     setQuickAddOpen(true);
@@ -26,10 +29,11 @@ function App() {
 
   return (
     <Router>
+      <Toaster richColors position="top-right" />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/transaction" element={<Transaction />} />
+          <Route path="/transactions" element={<Transaction />} />
           <Route path="/accounts" element={<AccountManager />} />
           <Route path="/descriptions" element={<Descriptions />} />
           <Route path="/settings" element={<SettingsPage />} />
@@ -42,3 +46,4 @@ function App() {
 }
 
 export default App;
+

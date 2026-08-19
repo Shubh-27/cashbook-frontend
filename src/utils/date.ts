@@ -60,7 +60,7 @@ export const presets = {
 };
 
 export const formatDateForPayload = (date: Date) => {
-  return format(date, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+  return date.toISOString();
 };
 
 export const formatDateRangeLabel = (range: DateRange | null) => {

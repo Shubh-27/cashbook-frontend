@@ -1,36 +1,32 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { DeleteConfirmModal } from '../../components/DeleteConfirmModal';
-import { api } from '../../api';
-import { rules, validateField, ValidationError } from '../../utils/validation';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
+import { useAppStore } from '@/store';
+import { api } from '@/services/api';
+import { rules, validateField, ValidationError } from '@/utils/validation';
 import {
   createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
 } from '@tanstack/react-table';
-import type { VwDescriptionList } from '../../types';
-import { Pencil, Trash2, Plus, ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Search } from 'lucide-react';
-import { Button } from '../../components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../../components/ui/dialog';
-import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { useAppStore } from '@/store';
+import { DataTable } from '@/components/common/DataTable';
+import { SearchInput } from '@/components/common/SearchInput';
+import { PaginationControls } from '@/components/common/PaginationControls';
+import { DescriptionCardFeed } from './components/DescriptionCardFeed';
+import { DescriptionModal } from './components/DescriptionModal';
+import type { VwDescriptionList } from '@/types';
+import { Pencil, Trash2, ArrowUpRight, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { DEFAULT_PAGE_SIZE } from '@/config/constants';
 
 const columnHelper = createColumnHelper<VwDescriptionList>();
 
-export function Descriptions() {  
+export function Descriptions() {
+  const fetchGlobalDescriptions = useAppStore(state => state.fetchDescriptions);
   const navigate = useNavigate();
   const [data, setData] = useState<VwDescriptionList[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const limit = 50;
+  const limit = DEFAULT_PAGE_SIZE;
 
   const [sortBy, setSortBy] = useState<string>('DescriptionName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -46,11 +42,19 @@ export function Descriptions() {
     name: [rules.required('Description name is required')]
   };
 
-  const handleDescriptionClick = (sid: string) => {
-    navigate(`/transaction?description_sid=${sid}`);
-  };
-  
+  const handleDescriptionClick = useCallback((sid: string) => {
+    navigate(`/transactions?description_sid=${sid}`);
+  }, [navigate]);
+
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const loadData = useCallback(async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       const res = await api.listDescriptions({
         search,
@@ -58,17 +62,31 @@ export function Descriptions() {
         page_size: limit,
         sort_by: sortBy,
         sort_order: sortOrder
-      });
-      setData(res.data);
-      setTotal(res.total_count);
+      }, abortController.signal);
+
+      if (!abortController.signal.aborted) {
+        setData(res.data);
+        setTotal(res.total_count);
+      }
     } catch (e) {
-      console.error(e);
+      if ((e instanceof Error && e.name === 'AbortError') || abortController.signal.aborted) {
+        return;
+      }
+      console.error('Failed to load descriptions:', e);
     }
-  }, [page, sortBy, sortOrder, search]);
+  }, [page, sortBy, sortOrder, search, limit]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (isAdding) {
@@ -79,9 +97,15 @@ export function Descriptions() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    await api.deleteDescription(deleteTarget.description_sid);
-    setDeleteTarget(null);
-    loadData();
+    try {
+      await api.deleteDescription(deleteTarget.description_sid);
+      setDeleteTarget(null);
+      await loadData();
+      await fetchGlobalDescriptions();
+    } catch (e) {
+      console.error('Failed to delete description:', e);
+      toast.error(e instanceof Error ? e.message : 'Failed to delete description');
+    }
   };
 
   const handleEditSave = async (e: React.FormEvent) => {
@@ -100,7 +124,8 @@ export function Descriptions() {
       });
       setEditingDesc(null);
       setErrors({});
-      loadData();
+      await loadData();
+      await fetchGlobalDescriptions();
     } catch (e) {
       if (e instanceof ValidationError) {
         const backendErrors: Record<string, string | null> = {};
@@ -129,7 +154,8 @@ export function Descriptions() {
       setIsAdding(false);
       setNewName('');
       setErrors({});
-      loadData();
+      await loadData();
+      await fetchGlobalDescriptions();
     } catch (e) {
       if (e instanceof ValidationError) {
         const backendErrors: Record<string, string | null> = {};
@@ -161,14 +187,14 @@ export function Descriptions() {
       id: 'actions',
       header: 'ACTIONS',
       cell: info => (
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" onClick={() => handleDescriptionClick(info.row.original.description_sid)} className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><ArrowUpRight className="w-4 h-4" /></Button>
-          <Button variant="ghost" size="icon" onClick={() => setEditingDesc(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><Pencil className="w-4 h-4" /></Button>
-          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(info.row.original)} className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon" onClick={() => handleDescriptionClick(info.row.original.description_sid)} aria-label="View activity" className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><ArrowUpRight className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setEditingDesc(info.row.original)} aria-label="Edit description" className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><Pencil className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(info.row.original)} aria-label="Delete description" className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
         </div>
       ),
     })
-  ], [page]);
+  ], [page, limit, handleDescriptionClick]);
 
   const handleSort = (columnId: string) => {
     let backendField = columnId;
@@ -183,188 +209,108 @@ export function Descriptions() {
     }
   };
 
-  const getSortIcon = (columnId: string) => {
-    let backendField = columnId;
-    if (columnId === 'description_name') backendField = 'DescriptionName';
-    if (columnId === 'usage_count') backendField = 'UsageCount';
-
-    if (sortBy !== backendField) return <ArrowUpDown className="w-3.5 h-3.5 ml-1.5 text-slate-300" />;
-    return sortOrder === 'asc' ? 
-      <ArrowUp className="w-3.5 h-3.5 ml-1.5 text-teal-600" /> : 
-      <ArrowDown className="w-3.5 h-3.5 ml-1.5 text-teal-600" />;
+  const getSortField = (columnId: string) => {
+    if (columnId === 'description_name') return 'DescriptionName';
+    if (columnId === 'usage_count') return 'UsageCount';
+    return columnId;
   };
 
-  const table = useReactTable({
-    data,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
-  const totalPages = Math.ceil(total / limit);
-
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-300 h-full">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold text-slate-800">Descriptions</h1>
-          <div className="relative group w-64 ml-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors z-10" />
-            <Input
-              placeholder="Search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 bg-white border-slate-200 rounded-xl focus:bg-white h-9"
-            />
-          </div>
-        </div>
-        <Button
-          onClick={() => setIsAdding(true)}
-          className="rounded-xl font-medium"
-        >
-          <Plus className="w-4 h-4" />
-          Add Description
-        </Button>
-      </div>
-
-      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl flex-1 flex flex-col overflow-hidden">
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
-              {table.getHeaderGroups().map(headerGroup => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map(header => {
-                    const isSortable = ['description_name', 'usage_count'].includes(header.id);
-                    return (
-                      <th 
-                        key={header.id} 
-                        className={`px-6 py-4 font-semibold text-slate-500 uppercase tracking-wider text-xs ${isSortable ? 'cursor-pointer hover:bg-slate-100 transition-colors' : ''}`}
-                        onClick={isSortable ? () => handleSort(header.id) : undefined}
-                      >
-                        <div className="flex items-center">
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {isSortable && getSortIcon(header.id)}
-                        </div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              ))}
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {table.getRowModel().rows.length > 0 ? (
-                table.getRowModel().rows.map(row => (
-                  <tr key={row.original.description_sid} className="hover:bg-slate-50 transition-colors group">
-                    {row.getVisibleCells().map(cell => (
-                      <td key={cell.id} className="px-6 py-3.5">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={columns.length} className="px-6 py-12 text-center text-slate-500">
-                    No descriptions found. Use the button above to add one.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+    <div className="flex flex-col gap-4 md:gap-6 animate-in fade-in duration-300 md:h-full flex-1 min-h-0">
+      {/* Header with Search and Add button */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+        <div className="hidden md:block">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-800">Descriptions</h1>
+          <p className="text-xs md:text-sm text-slate-500 mt-0.5">Organize and manage transaction category tags.</p>
         </div>
 
-        {/* Pagination */}
-        <div className="border-t border-slate-200 px-6 py-4 flex items-center justify-between bg-white text-sm">
-          <span className="text-slate-500 font-medium flex items-center gap-2">
-            Showing <span className="text-slate-800">{data.length > 0 ? (page - 1) * limit + 1 : 0}</span> to <span className="text-slate-800">{Math.min(page * limit, total)}</span> of <span className="text-slate-800">{total}</span>
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setPage(p => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="h-8 w-8"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <span className="px-2 font-medium text-slate-700">Page {page} of {totalPages || 1}</span>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || totalPages === 0}
-              className="h-8 w-8"
-            >
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search..."
+            className="flex-1 sm:w-64 sm:flex-none"
+          />
+          <Button
+            onClick={() => setIsAdding(true)}
+            className="rounded-xl font-medium shrink-0 h-10 sm:h-9 bg-teal-600 hover:bg-teal-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-1" /> Add Description
+          </Button>
         </div>
       </div>
 
-      {/* Edit Modal */}
-      <Dialog open={!!editingDesc} onOpenChange={(open) => { if (!open) { setEditingDesc(null); setErrors({}); } }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Description</DialogTitle>
-          </DialogHeader>
-          {editingDesc && (
-            <form onSubmit={handleEditSave} className="flex flex-col gap-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-desc-name">Name</Label>
-                <Input
-                  id="edit-desc-name"
-                  type="text"
-                  value={editingDesc.description_name}
-                  onChange={e => { setEditingDesc({ ...editingDesc, description_name: e.target.value }); setErrors({}); }}
-                  className={`h-10 ${errors.description_name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                  required
-                />
-                {errors.description_name && <p className="text-[11px] text-red-500 font-medium mt-1">{errors.description_name}</p>}
-              </div>
-              <DialogFooter className="sm:justify-end gap-3 pt-4 border-t">
-                <Button variant="ghost" type="button" onClick={() => setEditingDesc(null)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Save Changes
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Mobile Card Feed (< md) */}
+      <DescriptionCardFeed
+        data={data}
+        page={page}
+        pageSize={limit}
+        total={total}
+        onPageChange={setPage}
+        onDescriptionClick={handleDescriptionClick}
+        onEdit={setEditingDesc}
+        onDelete={setDeleteTarget}
+      />
 
-      {/* Add Modal */}
-      <Dialog open={isAdding} onOpenChange={(open) => { setIsAdding(open); if (!open) setErrors({}); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>New Description</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAddSubmit} className="flex flex-col gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-desc-name">Name</Label>
-              <Input
-                id="new-desc-name"
-                type="text"
-                value={newName}
-                onChange={e => { setNewName(e.target.value); setErrors({}); }}
-                className={`h-10 ${errors.description_name ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
-                placeholder="e.g. Salary, Rent, Groceries"
-                required
-              />
-              {errors.description_name && <p className="text-[11px] text-red-500 font-medium mt-1">{errors.description_name}</p>}
-            </div>
-            <DialogFooter className="sm:justify-end gap-3 pt-4 border-t">
-              <Button variant="ghost" type="button" onClick={() => setIsAdding(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                Add
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Desktop Table View (>= md) */}
+      <DataTable<VwDescriptionList>
+        data={data}
+        columns={columns}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSort={handleSort}
+        colWidths={['w-[6%]', 'w-[60%]', 'w-[19%]', 'w-[15%]']}
+        sortableColumns={['description_name', 'usage_count']}
+        getSortField={getSortField}
+        emptyMessage="No descriptions found. Use the button above to add one."
+        getRowId={(row) => row.description_sid}
+        footer={
+          <PaginationControls
+            variant="desktop"
+            page={page}
+            pageSize={limit}
+            total={total}
+            onPageChange={setPage}
+          />
+        }
+      />
+
+      {/* Unified Description Modal for Edit and Add */}
+      <DescriptionModal
+        open={!!editingDesc}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingDesc(null);
+            setErrors({});
+          }
+        }}
+        isEditing={true}
+        value={editingDesc?.description_name || ''}
+        onChange={(val) => {
+          if (editingDesc) {
+            setEditingDesc({ ...editingDesc, description_name: val });
+            setErrors({});
+          }
+        }}
+        onSubmit={handleEditSave}
+        error={errors.description_name}
+      />
+
+      <DescriptionModal
+        open={isAdding}
+        onOpenChange={(open) => {
+          setIsAdding(open);
+          if (!open) setErrors({});
+        }}
+        isEditing={false}
+        value={newName}
+        onChange={(val) => {
+          setNewName(val);
+          setErrors({});
+        }}
+        onSubmit={handleAddSubmit}
+        error={errors.description_name}
+      />
 
       <DeleteConfirmModal
         open={!!deleteTarget}

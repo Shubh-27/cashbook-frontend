@@ -8,16 +8,15 @@ export const UpdateNotifier: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // @ts-ignore
-    const { electronAPI } = window;
+    const electronAPI = window.electronAPI;
     if (!electronAPI) return;
 
-    electronAPI.onUpdateAvailable((info: any) => {
+    electronAPI.onUpdateAvailable((info) => {
       setUpdateAvailable(true);
       setVersion(info.version);
     });
 
-    electronAPI.onDownloadProgress((progress: any) => {
+    electronAPI.onDownloadProgress((progress) => {
       setDownloadProgress(Math.round(progress.percent));
     });
 
@@ -62,8 +61,7 @@ export const UpdateNotifier: React.FC = () => {
       ) : updateDownloaded ? (
         <button
           onClick={() => {
-            // @ts-ignore
-            window.electronAPI.quitAndInstall();
+            window.electronAPI?.quitAndInstall();
           }}
           className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors"
         >

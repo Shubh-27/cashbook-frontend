@@ -1,18 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Building2, FileText, Settings } from 'lucide-react';
-import { Logo } from './Logo';
+import { Logo } from '@/components/Logo';
+import { SIDEBAR_NAV_ITEMS } from '@/config/navigation';
 
 export function Sidebar() {
-  const navItems = [
-    { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Transactions', path: '/transaction', icon: Logo },
-    { name: 'Accounts', path: '/accounts', icon: Building2 },
-    { name: 'Descriptions', path: '/descriptions', icon: FileText },
-    { name: 'Settings', path: '/settings', icon: Settings },
-  ];
-
   return (
-    <div className="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm z-10">
+    <aside className="hidden md:flex w-64 bg-white border-r border-slate-200 flex-col shadow-sm z-10 shrink-0">
       <div className="h-16 flex items-center px-6 border-b border-slate-100">
         <div className="flex items-center gap-2 text-teal-600 font-bold text-xl tracking-tight">
           <Logo className="w-6 h-6" />
@@ -22,7 +14,7 @@ export function Sidebar() {
 
       <div className="flex-1 py-6 px-4 flex flex-col gap-1">
         <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 px-3">Menu</div>
-        {navItems.map((item) => (
+        {SIDEBAR_NAV_ITEMS.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -38,6 +30,6 @@ export function Sidebar() {
           </NavLink>
         ))}
       </div>
-    </div>
+    </aside>
   );
 }
