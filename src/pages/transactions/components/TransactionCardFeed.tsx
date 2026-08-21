@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import type { VwTransactionList } from '@/types';
-import { format, parseISO } from 'date-fns';
-import { Pencil, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
+import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PaginationControls } from '@/components/common/PaginationControls';
 import { useAppStore } from '@/store';
 
 export interface TransactionCardFeedProps {
@@ -10,7 +11,7 @@ export interface TransactionCardFeedProps {
   total: number;
   page: number;
   pageSize: number;
-  totalPages: number;
+  totalPages?: number;
   onPageChange: (newPage: number) => void;
   onEdit: (tx: VwTransactionList) => void;
   onDelete: (tx: VwTransactionList) => void;
@@ -21,11 +22,15 @@ export function TransactionCardFeed({
   total,
   page,
   pageSize,
-  totalPages,
   onPageChange,
   onEdit,
   onDelete,
 }: TransactionCardFeedProps) {
+  const formatTxDate = (rawDate?: string | null) => {
+    if (!rawDate) return '—';
+    const parsed = parseISO(rawDate);
+    return isValid(parsed) ? format(parsed, 'dd MMM yyyy') : '—';
+  };
   const accounts = useAppStore(state => state.accounts);
   const accountMap = useMemo(() => new Map(accounts.map(acc => [acc.account_sid, acc])), [accounts]);
 
@@ -37,7 +42,7 @@ export function TransactionCardFeed({
           <p className="text-xs text-slate-400 mt-1">Try adjusting your filters or date range.</p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5">
+        <div className="flex flex-col gap-3">
           {data.map((tx) => {
             const isDebit = tx.debit > 0;
             const amount = isDebit ? tx.debit : tx.credit;
@@ -46,11 +51,11 @@ export function TransactionCardFeed({
             return (
               <div
                 key={tx.transaction_sid}
-                className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col gap-2 transition-all"
+                className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col gap-3 transition-all"
               >
                 {/* Top Row: Description & Amount */}
                 <div className="flex items-center justify-between gap-3">
-                  <div className="font-bold text-slate-800 text-sm truncate flex-1">
+                  <div className="font-bold text-slate-800 text-base truncate flex-1">
                     {tx.description_name || 'Transaction'}
                   </div>
                   <div
@@ -68,13 +73,13 @@ export function TransactionCardFeed({
                     <span className="truncate">{tx.account_name || 'Account'}</span>
                     {acc?.account_number && (
                       <span className="shrink-0 whitespace-nowrap ml-1 font-mono text-[11px] text-slate-500">
-                        ({acc.account_number})
+                        ({acc.account_number.toString().slice(-4)})
                       </span>
                     )}
                   </span>
                   <span className="shrink-0 text-slate-300">•</span>
                   <span className="whitespace-nowrap shrink-0 font-medium text-slate-500">
-                    {format(parseISO(tx.transaction_date), 'dd MMM yyyy')}
+                    {formatTxDate(tx.transaction_date)}
                   </span>
                 </div>
 
@@ -84,12 +89,13 @@ export function TransactionCardFeed({
                   </div>
                 )}
 
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-2">
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-end gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => onEdit(tx)}
-                    className="h-8 px-3 text-xs text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg"
+                    aria-label="Edit transaction"
+                    className="h-8 px-2.5 text-xs text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg"
                   >
                     <Pencil className="w-3.5 h-3.5 mr-1" />
                     Edit
@@ -98,7 +104,8 @@ export function TransactionCardFeed({
                     variant="ghost"
                     size="sm"
                     onClick={() => onDelete(tx)}
-                    className="h-8 px-3 text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
+                    aria-label="Delete transaction"
+                    className="h-8 px-2.5 text-xs text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
                   >
                     <Trash2 className="w-3.5 h-3.5 mr-1" />
                     Delete
@@ -111,36 +118,14 @@ export function TransactionCardFeed({
       )}
 
       {/* Mobile Pagination */}
-      <div className="mt-2 bg-white border border-slate-200/80 rounded-2xl p-3 flex items-center justify-between shadow-sm">
-        <span className="text-xs font-medium text-slate-500">
-          {data.length > 0 ? (page - 1) * pageSize + 1 : 0} - {Math.min(page * pageSize, total)} of {total}
-        </span>
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="h-8 px-2.5 text-xs rounded-xl"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 mr-1" />
-            Prev
-          </Button>
-          <span className="text-xs font-semibold text-slate-700 px-1">
-            {page}/{totalPages || 1}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-            disabled={page === totalPages || totalPages === 0}
-            className="h-8 px-2.5 text-xs rounded-xl"
-          >
-            Next
-            <ArrowRight className="w-3.5 h-3.5 ml-1" />
-          </Button>
-        </div>
-      </div>
+      <PaginationControls
+        variant="mobile"
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        onPageChange={onPageChange}
+        className="mt-2"
+      />
     </div>
   );
 }

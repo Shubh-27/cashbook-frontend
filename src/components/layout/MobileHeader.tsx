@@ -3,12 +3,13 @@ import { Settings } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { getPageTitle } from '@/config/navigation';
+import { ROUTES } from '@/config/routes';
 
 export function MobileHeader() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const isSettings = location.pathname === '/settings';
+  const isSettings = location.pathname === ROUTES.SETTINGS;
 
   return (
     <header className="md:hidden sticky top-0 left-0 right-0 z-30 glass-header border-b border-slate-200/80 px-4 pt-safe">
@@ -31,7 +32,7 @@ export function MobileHeader() {
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => navigate('/settings')}
+            onClick={() => navigate(ROUTES.SETTINGS)}
             className={`h-9 w-9 rounded-xl transition-colors active:scale-95 ${
               isSettings ? 'bg-teal-50 text-teal-600' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
             }`}

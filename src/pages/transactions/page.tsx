@@ -7,10 +7,12 @@ import type { VwTransactionList, FilterRequest } from '@/types';
 import type { TransactionFormValues } from '@/components/common/TransactionForm';
 import { isValid } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { SearchInput } from '@/components/common/SearchInput';
+import { SearchInput, MobileSortSheet, type MobileSortOption } from '@/components/common';
 import type { DateRange } from '@/utils/date';
 import { presets, formatDateForPayload } from '@/utils/date';
 import { toast } from 'sonner';
+
+import { getTransactionSortField } from '@/utils/sort';
 
 import { TransactionTable } from './components/TransactionTable';
 import { TransactionCardFeed } from './components/TransactionCardFeed';
@@ -19,6 +21,8 @@ import { TransactionExportModal } from './components/TransactionExportModal';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { TransactionFilterPanel } from './components/TransactionFilterPanel';
 import { DEFAULT_PAGE_SIZE } from '@/config/constants';
+
+import { QUERY_PARAMS } from '@/config/routes';
 
 export function Transaction() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,12 +33,12 @@ export function Transaction() {
   const lastTransactionUpdate = useAppStore(state => state.lastTransactionUpdate);
   const refreshTransactions = useAppStore(state => state.refreshTransactions);
 
-  const selectedAccountSids = useMemo(() => searchParams.getAll('account_sid'), [searchParams]);
-  const selectedDescriptionSids = useMemo(() => searchParams.getAll('description_sid'), [searchParams]);
-  const search = searchParams.get('search') || '';
-  const startDateParam = searchParams.get('start_date');
-  const endDateParam = searchParams.get('end_date');
-  const isAllTime = searchParams.get('all') === 'true';
+  const selectedAccountSids = useMemo(() => searchParams.getAll(QUERY_PARAMS.ACCOUNT_SID), [searchParams]);
+  const selectedDescriptionSids = useMemo(() => searchParams.getAll(QUERY_PARAMS.DESCRIPTION_SID), [searchParams]);
+  const search = searchParams.get(QUERY_PARAMS.SEARCH) || '';
+  const startDateParam = searchParams.get(QUERY_PARAMS.START_DATE);
+  const endDateParam = searchParams.get(QUERY_PARAMS.END_DATE);
+  const isAllTime = searchParams.get(QUERY_PARAMS.ALL) === 'true';
 
   const dateRange = useMemo<DateRange | null>(() => {
     if (startDateParam && endDateParam) {
@@ -53,8 +57,8 @@ export function Transaction() {
       const defaultFY = presets.currentFY();
       setSearchParams(prev => {
         const next = new URLSearchParams(prev);
-        next.set('start_date', defaultFY.from.toISOString());
-        next.set('end_date', defaultFY.to.toISOString());
+        next.set(QUERY_PARAMS.START_DATE, defaultFY.from.toISOString());
+        next.set(QUERY_PARAMS.END_DATE, defaultFY.to.toISOString());
         return next;
       }, { replace: true });
     }
@@ -146,13 +150,7 @@ export function Transaction() {
   }, [selectedAccountSids, selectedDescriptionSids, search, dateRange]);
 
   const handleSort = (columnId: string) => {
-    let backendField = columnId;
-    if (columnId === 'transaction_date') backendField = 'TransactionDate';
-    if (columnId === 'account_name') backendField = 'AccountName';
-    if (columnId === 'description_name') backendField = 'DescriptionName';
-    if (columnId === 'debit') backendField = 'Debit';
-    if (columnId === 'credit') backendField = 'Credit';
-
+    const backendField = getTransactionSortField(columnId);
     if (sortBy === backendField) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -160,6 +158,23 @@ export function Transaction() {
       setSortOrder('asc');
     }
   };
+
+  const transactionSortOptions: MobileSortOption[] = useMemo(() => [
+    { id: 'date-desc', label: 'Date: Newest first', field: getTransactionSortField('transaction_date'), order: 'desc' },
+    { id: 'date-asc', label: 'Date: Oldest first', field: getTransactionSortField('transaction_date'), order: 'asc' },
+    { id: 'account-asc', label: 'Account Name: A → Z', field: getTransactionSortField('account_name'), order: 'asc' },
+    { id: 'account-desc', label: 'Account Name: Z → A', field: getTransactionSortField('account_name'), order: 'desc' },
+    { id: 'desc-asc', label: 'Description: A → Z', field: getTransactionSortField('description_name'), order: 'asc' },
+    { id: 'desc-desc', label: 'Description: Z → A', field: getTransactionSortField('description_name'), order: 'desc' },
+    { id: 'debit-desc', label: 'Debit (Expense): High → Low', field: getTransactionSortField('debit'), order: 'desc' },
+    { id: 'credit-desc', label: 'Credit (Income): High → Low', field: getTransactionSortField('credit'), order: 'desc' },
+  ], []);
+
+  const handleMobileSortChange = useCallback((field: string, order: 'asc' | 'desc') => {
+    setSortBy(field);
+    setSortOrder(order);
+  }, []);
+
 
   const handleDelete = async () => {
     if (!deleteTargetTx) return;
@@ -223,13 +238,14 @@ export function Transaction() {
 
     try {
       const amount = parseFloat(values.amount);
-      const origDate = new Date(editingTx.transaction_date);
-      const [year, month, day] = values.transaction_date.split('-').map(Number);
-      origDate.setFullYear(year, month - 1, day);
+      const origDateStr = editingTx.transaction_date;
+      const newTransactionDate = (origDateStr && origDateStr.includes('T'))
+        ? `${values.transaction_date}T${origDateStr.substring(origDateStr.indexOf('T') + 1)}`
+        : `${values.transaction_date}T00:00:00.000Z`;
 
       await api.updateTransaction(editingTx.transaction_sid, {
         account_sid: values.account_sid,
-        transaction_date: origDate.toISOString(),
+        transaction_date: newTransactionDate,
         description_sid: values.description_sid || '',
         description_name: values.description_name,
         debit: values.type === 'DEBIT' ? amount : 0,
@@ -268,20 +284,20 @@ export function Transaction() {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
       if (filters.dateRange) {
-        next.delete('all');
-        next.set('start_date', filters.dateRange.from.toISOString());
-        next.set('end_date', filters.dateRange.to.toISOString());
+        next.delete(QUERY_PARAMS.ALL);
+        next.set(QUERY_PARAMS.START_DATE, filters.dateRange.from.toISOString());
+        next.set(QUERY_PARAMS.END_DATE, filters.dateRange.to.toISOString());
       } else {
-        next.delete('start_date');
-        next.delete('end_date');
-        next.set('all', 'true');
+        next.delete(QUERY_PARAMS.START_DATE);
+        next.delete(QUERY_PARAMS.END_DATE);
+        next.set(QUERY_PARAMS.ALL, 'true');
       }
 
-      next.delete('account_sid');
-      filters.accountSids.forEach(id => next.append('account_sid', id));
+      next.delete(QUERY_PARAMS.ACCOUNT_SID);
+      filters.accountSids.forEach(id => next.append(QUERY_PARAMS.ACCOUNT_SID, id));
 
-      next.delete('description_sid');
-      filters.descriptionSids.forEach(id => next.append('description_sid', id));
+      next.delete(QUERY_PARAMS.DESCRIPTION_SID);
+      filters.descriptionSids.forEach(id => next.append(QUERY_PARAMS.DESCRIPTION_SID, id));
 
       return next;
     });
@@ -290,26 +306,26 @@ export function Transaction() {
   const handleClearAllFilters = useCallback(() => {
     setSearchParams(prev => {
       const next = new URLSearchParams(prev);
-      next.delete('start_date');
-      next.delete('end_date');
-      next.set('all', 'true');
-      next.delete('account_sid');
-      next.delete('description_sid');
+      next.delete(QUERY_PARAMS.START_DATE);
+      next.delete(QUERY_PARAMS.END_DATE);
+      next.set(QUERY_PARAMS.ALL, 'true');
+      next.delete(QUERY_PARAMS.ACCOUNT_SID);
+      next.delete(QUERY_PARAMS.DESCRIPTION_SID);
       return next;
     });
   }, [setSearchParams]);
 
   const handleSearchChange = useCallback((val: string) => {
     setSearchParams(prev => {
-      if (val) prev.set('search', val);
-      else prev.delete('search');
+      if (val) prev.set(QUERY_PARAMS.SEARCH, val);
+      else prev.delete(QUERY_PARAMS.SEARCH);
       return prev;
     });
   }, [setSearchParams]);
 
   const handleClearSearch = useCallback(() => {
     setSearchParams(prev => {
-      prev.delete('search');
+      prev.delete(QUERY_PARAMS.SEARCH);
       return prev;
     });
   }, [setSearchParams]);
@@ -333,6 +349,16 @@ export function Transaction() {
             onClear={handleClearSearch}
             className="flex-1 sm:w-64 sm:flex-none"
           />
+
+          <div className="md:hidden">
+            <MobileSortSheet
+              options={transactionSortOptions}
+              currentField={sortBy}
+              currentOrder={sortOrder}
+              onSortChange={handleMobileSortChange}
+              ariaLabel="Sort transactions"
+            />
+          </div>
 
           <div className="md:hidden">
             <TransactionFilterPanel

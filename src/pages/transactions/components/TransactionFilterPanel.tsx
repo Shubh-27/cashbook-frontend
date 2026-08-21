@@ -101,11 +101,10 @@ export function TransactionFilterPanel({
             syncStateFromProps();
             setSheetOpen(true);
           }}
-          className={`relative shrink-0 h-10 px-3 rounded-xl border-slate-200 text-slate-700 hover:text-teal-700 hover:bg-teal-50 flex items-center gap-1.5 ${buttonClassName || ''}`}
+          className={`relative shrink-0 h-10 px-3 rounded-xl border-slate-200 text-slate-700 hover:text-teal-700 hover:bg-teal-50 flex items-center justify-center gap-1.5 ${buttonClassName || ''}`}
           aria-label="Filter transactions"
         >
           <SlidersHorizontal className="w-4 h-4 text-slate-500" />
-          <span className="text-sm font-medium">Filters</span>
           {activeFilterCount > 0 && (
             <span className="px-1.5 py-0.5 bg-teal-600 text-white text-[10px] font-bold rounded-full min-w-[18px] text-center leading-none">
               {activeFilterCount}

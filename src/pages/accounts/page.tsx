@@ -6,9 +6,8 @@ import { rules, validateField, ValidationError } from '@/utils/validation';
 import {
   createColumnHelper,
 } from '@tanstack/react-table';
-import { DataTable } from '@/components/common/DataTable';
-import { SearchInput } from '@/components/common/SearchInput';
-import { PaginationControls } from '@/components/common/PaginationControls';
+import { DataTable, SearchInput, PaginationControls, MobileSortSheet, type MobileSortOption } from '@/components/common';
+import { getAccountSortField } from '@/utils/sort';
 import { AccountCardFeed } from './components/AccountCardFeed';
 import { AccountModal } from './components/AccountModal';
 import type { VwAccountList } from '@/types';
@@ -17,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DEFAULT_PAGE_SIZE } from '@/config/constants';
+
+import { buildTransactionsUrl } from '@/config/routes';
 
 const columnHelper = createColumnHelper<VwAccountList>();
 
@@ -47,7 +48,7 @@ export function AccountManager() {
   };
 
   const handleAccountClick = useCallback((sid: string) => {
-    navigate(`/transactions?account_sid=${sid}`);
+    navigate(buildTransactionsUrl({ accountSid: sid }));
   }, [navigate]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -218,11 +219,7 @@ export function AccountManager() {
   ], [page, limit, handleAccountClick]);
 
   const handleSort = (columnId: string) => {
-    let backendField = columnId;
-    if (columnId === 'account_name') backendField = 'AccountName';
-    if (columnId === 'bank_name') backendField = 'BankName';
-    if (columnId === 'account_number') backendField = 'AccountNumber';
-
+    const backendField = getAccountSortField(columnId);
     if (sortBy === backendField) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -231,15 +228,22 @@ export function AccountManager() {
     }
   };
 
-  const getSortField = (columnId: string) => {
-    if (columnId === 'account_name') return 'AccountName';
-    if (columnId === 'bank_name') return 'BankName';
-    if (columnId === 'account_number') return 'AccountNumber';
-    return columnId;
-  };
+  const accountSortOptions: MobileSortOption[] = useMemo(() => [
+    { id: 'name-asc', label: 'Account Name: A → Z', field: getAccountSortField('account_name'), order: 'asc' },
+    { id: 'name-desc', label: 'Account Name: Z → A', field: getAccountSortField('account_name'), order: 'desc' },
+    { id: 'bank-asc', label: 'Bank Name: A → Z', field: getAccountSortField('bank_name'), order: 'asc' },
+    { id: 'bank-desc', label: 'Bank Name: Z → A', field: getAccountSortField('bank_name'), order: 'desc' },
+    { id: 'num-asc', label: 'Account No: Ascending', field: getAccountSortField('account_number'), order: 'asc' },
+    { id: 'num-desc', label: 'Account No: Descending', field: getAccountSortField('account_number'), order: 'desc' },
+  ], []);
+
+  const handleMobileSortChange = useCallback((field: string, order: 'asc' | 'desc') => {
+    setSortBy(field);
+    setSortOrder(order);
+  }, []);
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6 animate-in fade-in duration-300 md:h-full">
+    <div className="flex flex-col gap-4 md:gap-6 animate-in fade-in duration-300 md:h-full flex-1 min-h-0">
       {/* Header with Search and Add button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div className="hidden md:block">
@@ -254,11 +258,22 @@ export function AccountManager() {
             placeholder="Search..."
             className="flex-1 sm:w-64 sm:flex-none"
           />
+          <div className="md:hidden">
+            <MobileSortSheet
+              options={accountSortOptions}
+              currentField={sortBy}
+              currentOrder={sortOrder}
+              onSortChange={handleMobileSortChange}
+              ariaLabel="Sort accounts"
+            />
+          </div>
           <Button
             onClick={openAdd}
-            className="rounded-xl font-medium shrink-0 h-10 sm:h-9 bg-teal-600 hover:bg-teal-700 text-white"
+            className="rounded-xl font-medium shrink-0 h-10 sm:h-9 px-3 sm:px-3.5 bg-teal-600 hover:bg-teal-700 text-white"
+            aria-label="Add account"
           >
-            <Plus className="w-4 h-4 mr-1" /> Add Account
+            <Plus className="w-4 h-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Add Account</span>
           </Button>
         </div>
       </div>
@@ -284,7 +299,7 @@ export function AccountManager() {
         onSort={handleSort}
         colWidths={['w-[6%]', 'w-[28%]', 'w-[22%]', 'w-[15%]', 'w-[17%]', 'w-[12%]']}
         sortableColumns={['account_name', 'bank_name', 'account_number']}
-        getSortField={getSortField}
+        getSortField={getAccountSortField}
         emptyMessage="No accounts found. Click &quot;Add Account&quot; to create your first bank account."
         getRowId={(row) => row.account_sid}
         footer={

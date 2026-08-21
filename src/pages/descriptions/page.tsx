@@ -6,9 +6,8 @@ import { rules, validateField, ValidationError } from '@/utils/validation';
 import {
   createColumnHelper,
 } from '@tanstack/react-table';
-import { DataTable } from '@/components/common/DataTable';
-import { SearchInput } from '@/components/common/SearchInput';
-import { PaginationControls } from '@/components/common/PaginationControls';
+import { DataTable, SearchInput, PaginationControls, MobileSortSheet, type MobileSortOption } from '@/components/common';
+import { getDescriptionSortField } from '@/utils/sort';
 import { DescriptionCardFeed } from './components/DescriptionCardFeed';
 import { DescriptionModal } from './components/DescriptionModal';
 import type { VwDescriptionList } from '@/types';
@@ -17,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DEFAULT_PAGE_SIZE } from '@/config/constants';
+
+import { buildTransactionsUrl } from '@/config/routes';
 
 const columnHelper = createColumnHelper<VwDescriptionList>();
 
@@ -43,7 +44,7 @@ export function Descriptions() {
   };
 
   const handleDescriptionClick = useCallback((sid: string) => {
-    navigate(`/transactions?description_sid=${sid}`);
+    navigate(buildTransactionsUrl({ descriptionSid: sid }));
   }, [navigate]);
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -197,10 +198,7 @@ export function Descriptions() {
   ], [page, limit, handleDescriptionClick]);
 
   const handleSort = (columnId: string) => {
-    let backendField = columnId;
-    if (columnId === 'description_name') backendField = 'DescriptionName';
-    if (columnId === 'usage_count') backendField = 'UsageCount';
-
+    const backendField = getDescriptionSortField(columnId);
     if (sortBy === backendField) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -209,11 +207,17 @@ export function Descriptions() {
     }
   };
 
-  const getSortField = (columnId: string) => {
-    if (columnId === 'description_name') return 'DescriptionName';
-    if (columnId === 'usage_count') return 'UsageCount';
-    return columnId;
-  };
+  const descriptionSortOptions: MobileSortOption[] = useMemo(() => [
+    { id: 'name-asc', label: 'Description: A → Z', field: getDescriptionSortField('description_name'), order: 'asc' },
+    { id: 'name-desc', label: 'Description: Z → A', field: getDescriptionSortField('description_name'), order: 'desc' },
+    { id: 'usage-desc', label: 'Most Used First', field: getDescriptionSortField('usage_count'), order: 'desc' },
+    { id: 'usage-asc', label: 'Least Used First', field: getDescriptionSortField('usage_count'), order: 'asc' },
+  ], []);
+
+  const handleMobileSortChange = useCallback((field: string, order: 'asc' | 'desc') => {
+    setSortBy(field);
+    setSortOrder(order);
+  }, []);
 
   return (
     <div className="flex flex-col gap-4 md:gap-6 animate-in fade-in duration-300 md:h-full flex-1 min-h-0">
@@ -231,11 +235,22 @@ export function Descriptions() {
             placeholder="Search..."
             className="flex-1 sm:w-64 sm:flex-none"
           />
+          <div className="md:hidden">
+            <MobileSortSheet
+              options={descriptionSortOptions}
+              currentField={sortBy}
+              currentOrder={sortOrder}
+              onSortChange={handleMobileSortChange}
+              ariaLabel="Sort descriptions"
+            />
+          </div>
           <Button
             onClick={() => setIsAdding(true)}
-            className="rounded-xl font-medium shrink-0 h-10 sm:h-9 bg-teal-600 hover:bg-teal-700 text-white"
+            className="rounded-xl font-medium shrink-0 h-10 sm:h-9 px-3 sm:px-3.5 bg-teal-600 hover:bg-teal-700 text-white"
+            aria-label="Add description"
           >
-            <Plus className="w-4 h-4 mr-1" /> Add Description
+            <Plus className="w-4 h-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Add Description</span>
           </Button>
         </div>
       </div>
@@ -261,7 +276,7 @@ export function Descriptions() {
         onSort={handleSort}
         colWidths={['w-[6%]', 'w-[60%]', 'w-[19%]', 'w-[15%]']}
         sortableColumns={['description_name', 'usage_count']}
-        getSortField={getSortField}
+        getSortField={getDescriptionSortField}
         emptyMessage="No descriptions found. Use the button above to add one."
         getRowId={(row) => row.description_sid}
         footer={

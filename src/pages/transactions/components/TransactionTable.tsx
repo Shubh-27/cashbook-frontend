@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
 import { createColumnHelper } from '@tanstack/react-table';
 import type { VwTransactionList } from '@/types';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/common/DataTable';
 import { PaginationControls } from '@/components/common/PaginationControls';
+import { getTransactionSortField } from '@/utils/sort';
 
 const columnHelper = createColumnHelper<VwTransactionList>();
 
@@ -47,7 +48,13 @@ export function TransactionTable({
     }),
     columnHelper.accessor('transaction_date', {
       header: 'DATE',
-      cell: (info) => <span className="font-medium">{format(parseISO(info.getValue()), 'dd MMM yyyy')}</span>,
+      cell: (info) => {
+        const rawDate = info.getValue();
+        if (!rawDate) return <span className="text-slate-400 font-medium">—</span>;
+        const parsed = parseISO(rawDate);
+        if (!isValid(parsed)) return <span className="text-slate-400 font-medium">—</span>;
+        return <span className="font-medium">{format(parsed, 'dd MMM yyyy')}</span>;
+      },
     }),
     columnHelper.accessor('account_name', {
       header: 'ACCOUNT',
@@ -101,15 +108,6 @@ export function TransactionTable({
     }),
   ], [page, pageSize, onEdit, onDelete]);
 
-  const getSortField = (columnId: string) => {
-    if (columnId === 'transaction_date') return 'TransactionDate';
-    if (columnId === 'account_name') return 'AccountName';
-    if (columnId === 'description_name') return 'DescriptionName';
-    if (columnId === 'debit') return 'Debit';
-    if (columnId === 'credit') return 'Credit';
-    return columnId;
-  };
-
   return (
     <DataTable<VwTransactionList>
       data={data}
@@ -119,7 +117,7 @@ export function TransactionTable({
       onSort={onSort}
       colWidths={['w-[5%]', 'w-[11%]', 'w-[18%]', 'w-[20%]', 'w-[11%]', 'w-[11%]', 'w-[16%]', 'w-[8%]']}
       sortableColumns={['transaction_date', 'account_name', 'description_name', 'debit', 'credit']}
-      getSortField={getSortField}
+      getSortField={getTransactionSortField}
       emptyMessage="No transactions found."
       getRowId={(row) => row.transaction_sid}
       footer={

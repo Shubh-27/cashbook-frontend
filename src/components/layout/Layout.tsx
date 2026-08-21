@@ -1,9 +1,11 @@
+import { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { MobileHeader } from './MobileHeader';
 import { BottomNav } from './BottomNav';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PageLoadingFallback } from '@/components/common/PageLoadingFallback';
 
 export function Layout() {
   return (
@@ -18,11 +20,13 @@ export function Layout() {
         {/* Desktop Topbar */}
         <Topbar />
 
-        {/* Main Content Area — Mobile scrolls outer, Desktop tables scroll internally */}
-        <div className="flex-1 overflow-x-hidden overflow-y-auto md:overflow-hidden w-full mobile-scroll">
+        {/* Main Content Area — Layout scrolls when content overflows, Desktop tables scroll internally */}
+        <div className="flex-1 overflow-x-hidden overflow-y-auto w-full mobile-scroll">
           <main className="w-full p-4 sm:p-6 md:p-8 max-w-7xl mx-auto min-h-full md:h-full flex flex-col min-h-0">
             <ErrorBoundary>
-              <Outlet />
+              <Suspense fallback={<PageLoadingFallback />}>
+                <Outlet />
+              </Suspense>
             </ErrorBoundary>
           </main>
         </div>

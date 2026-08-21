@@ -1,5 +1,6 @@
 import React from 'react';
 import { LayoutDashboard, ArrowLeftRight, Building2, FileText, Settings, type LucideIcon } from 'lucide-react';
+import { ROUTES } from './routes';
 
 export type NavIcon = LucideIcon | React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
 
@@ -21,35 +22,35 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   {
     name: 'Dashboard',
-    path: '/',
+    path: ROUTES.DASHBOARD,
     icon: LayoutDashboard,
     showInBottomNav: true,
     showInSidebar: true,
   },
   {
     name: 'Transactions',
-    path: '/transactions',
+    path: ROUTES.TRANSACTIONS,
     icon: ArrowLeftRight,
     showInBottomNav: true,
     showInSidebar: true,
   },
   {
     name: 'Accounts',
-    path: '/accounts',
+    path: ROUTES.ACCOUNTS,
     icon: Building2,
     showInBottomNav: true,
     showInSidebar: true,
   },
   {
     name: 'Descriptions',
-    path: '/descriptions',
+    path: ROUTES.DESCRIPTIONS,
     icon: FileText,
     showInBottomNav: true,
     showInSidebar: true,
   },
   {
     name: 'Settings',
-    path: '/settings',
+    path: ROUTES.SETTINGS,
     icon: Settings,
     showInBottomNav: false,
     showInSidebar: true,

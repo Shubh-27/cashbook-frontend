@@ -91,7 +91,7 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6 animate-in fade-in duration-300">
+    <div className="flex flex-col gap-4 md:gap-6 animate-in fade-in duration-300 pb-8 md:pb-12">
       <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-800">Settings</h1>

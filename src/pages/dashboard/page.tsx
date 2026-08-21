@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '@/store';
 import { api } from '@/services/api';
 import type { VwTransactionList } from '@/types';
-import { 
-  ArrowLeftRight, 
-  Building2, 
+import {
+  ArrowLeftRight,
+  Building2,
   ChevronRight,
   TrendingDown,
   TrendingUp,
@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
+
+import { ROUTES, buildTransactionsUrl } from '@/config/routes';
 
 export function Dashboard() {
   const accounts = useAppStore(state => state.accounts);
@@ -67,7 +69,7 @@ export function Dashboard() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-6 md:gap-8 animate-in fade-in duration-300">
+    <div className="flex flex-col gap-6 md:gap-8 animate-in fade-in duration-300 pb-8 md:pb-12">
       {/* Mobile/Desktop Hero Overview */}
       <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-teal-950 text-white rounded-3xl p-6 md:p-8 shadow-md">
         <div className="absolute -right-12 -top-12 w-48 h-48 bg-teal-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -98,7 +100,7 @@ export function Dashboard() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => navigate('/transactions')}
+              onClick={() => navigate(ROUTES.TRANSACTIONS)}
               className="bg-white/10 hover:bg-white/20 active:scale-95 text-white border-white/15 rounded-2xl px-4 h-11 backdrop-blur-md transition-all flex items-center gap-1.5"
             >
               <ArrowLeftRight className="w-4 h-4" />
@@ -117,7 +119,7 @@ export function Dashboard() {
           </div>
           <Button
             variant="ghost"
-            onClick={() => navigate('/accounts')}
+            onClick={() => navigate(ROUTES.ACCOUNTS)}
             className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 p-2 h-auto text-xs md:text-sm font-semibold rounded-xl"
           >
             Manage Accounts &rarr;
@@ -134,7 +136,7 @@ export function Dashboard() {
               Create your first bank account to begin tracking your expenses and income.
             </p>
             <Button
-              onClick={() => navigate('/accounts')}
+              onClick={() => navigate(ROUTES.ACCOUNTS)}
               className="px-5 rounded-xl font-medium bg-teal-600 hover:bg-teal-700 text-white"
             >
               Add Your First Account
@@ -147,11 +149,11 @@ export function Dashboard() {
                 key={acc.account_sid}
                 role="button"
                 tabIndex={0}
-                onClick={() => navigate(`/transactions?account_sid=${acc.account_sid}`)}
+                onClick={() => navigate(buildTransactionsUrl({ accountSid: acc.account_sid }))}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    navigate(`/transactions?account_sid=${acc.account_sid}`);
+                    navigate(buildTransactionsUrl({ accountSid: acc.account_sid }));
                   }
                 }}
                 className="group cursor-pointer bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md hover:border-teal-300 transition-all duration-200 flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
@@ -192,7 +194,7 @@ export function Dashboard() {
           </div>
           <Button
             variant="ghost"
-            onClick={() => navigate('/transactions')}
+            onClick={() => navigate(ROUTES.TRANSACTIONS)}
             className="text-teal-600 hover:text-teal-700 hover:bg-teal-50 p-2 h-auto text-xs md:text-sm font-semibold rounded-xl"
           >
             All Transactions &rarr;
@@ -223,20 +225,19 @@ export function Dashboard() {
                   key={tx.transaction_sid}
                   role="button"
                   tabIndex={0}
-                  onClick={() => navigate('/transactions')}
+                  onClick={() => navigate(ROUTES.TRANSACTIONS)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
-                      navigate('/transactions');
+                      navigate(ROUTES.TRANSACTIONS);
                     }
                   }}
                   className="p-4 hover:bg-slate-50/80 active:bg-slate-100/80 transition-colors flex items-center justify-between gap-3 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                 >
                   <div className="flex items-center gap-3.5 min-w-0">
                     <div
-                      className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
-                        isDebit ? 'bg-rose-50 text-rose-600' : 'bg-teal-50 text-teal-600'
-                      }`}
+                      className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${isDebit ? 'bg-rose-50 text-rose-600' : 'bg-teal-50 text-teal-600'
+                        }`}
                     >
                       {isDebit ? <TrendingDown className="w-5 h-5" /> : <TrendingUp className="w-5 h-5" />}
                     </div>
@@ -256,7 +257,9 @@ export function Dashboard() {
                         </span>
                         <span className="shrink-0 text-slate-300">•</span>
                         <span className="whitespace-nowrap shrink-0 text-slate-500">
-                          {format(parseISO(tx.transaction_date), 'dd MMM yyyy')}
+                          {tx.transaction_date && isValid(parseISO(tx.transaction_date))
+                            ? format(parseISO(tx.transaction_date), 'dd MMM yyyy')
+                            : '—'}
                         </span>
                       </div>
                     </div>
@@ -264,9 +267,8 @@ export function Dashboard() {
 
                   <div className="text-right shrink-0">
                     <div
-                      className={`font-bold text-sm sm:text-base font-mono ${
-                        isDebit ? 'text-rose-600' : 'text-teal-600'
-                      }`}
+                      className={`font-bold text-sm sm:text-base font-mono ${isDebit ? 'text-rose-600' : 'text-teal-600'
+                        }`}
                     >
                       {isDebit ? `- ₹${amount.toFixed(2)}` : `+ ₹${amount.toFixed(2)}`}
                     </div>
