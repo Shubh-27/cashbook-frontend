@@ -4,6 +4,9 @@ export const ROUTES = {
   TRANSACTIONS: '/transactions',
   ACCOUNTS: '/accounts',
   DESCRIPTIONS: '/descriptions',
+  IMPORT_PROFILES: '/import-profiles',
+  IMPORT_PROFILE_NEW: '/import-profiles/new',
+  IMPORT_PROFILE_EDIT: '/import-profiles/:profileSID',
   SETTINGS: '/settings',
 } as const;
 

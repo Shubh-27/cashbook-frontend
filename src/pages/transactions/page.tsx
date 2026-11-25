@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { api } from '@/services/api';
 import type { VwTransactionList, FilterRequest } from '@/types';
@@ -20,6 +20,7 @@ import { TransactionEditModal } from './components/TransactionEditModal';
 import { TransactionExportModal } from './components/TransactionExportModal';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { TransactionFilterPanel } from './components/TransactionFilterPanel';
+import { StatementImportWizard } from './components/StatementImportWizard';
 import { DEFAULT_PAGE_SIZE } from '@/config/constants';
 
 import { QUERY_PARAMS } from '@/config/routes';
@@ -30,8 +31,15 @@ export function Transaction() {
   const descriptions = useAppStore(state => state.descriptions);
   const fetchAccounts = useAppStore(state => state.fetchAccounts);
   const fetchDescriptions = useAppStore(state => state.fetchDescriptions);
+  const ensureAccountsLoaded = useAppStore(state => state.ensureAccountsLoaded);
+  const ensureDescriptionsLoaded = useAppStore(state => state.ensureDescriptionsLoaded);
   const lastTransactionUpdate = useAppStore(state => state.lastTransactionUpdate);
   const refreshTransactions = useAppStore(state => state.refreshTransactions);
+
+  useEffect(() => {
+    void ensureAccountsLoaded();
+    void ensureDescriptionsLoaded();
+  }, [ensureAccountsLoaded, ensureDescriptionsLoaded]);
 
   const selectedAccountSids = useMemo(() => searchParams.getAll(QUERY_PARAMS.ACCOUNT_SID), [searchParams]);
   const selectedDescriptionSids = useMemo(() => searchParams.getAll(QUERY_PARAMS.DESCRIPTION_SID), [searchParams]);
@@ -71,6 +79,7 @@ export function Transaction() {
   const [editingTx, setEditingTx] = useState<VwTransactionList | null>(null);
   const [deleteTargetTx, setDeleteTargetTx] = useState<VwTransactionList | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [importWizardOpen, setImportWizardOpen] = useState(false);
 
   // Export Modal State
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -390,6 +399,16 @@ export function Transaction() {
 
           <Button
             variant="outline"
+            onClick={() => setImportWizardOpen(true)}
+            className="shrink-0 h-10 sm:h-9 px-3 sm:px-3.5 rounded-xl border-slate-200 text-slate-600 hover:text-teal-600 hover:bg-teal-50"
+            aria-label="Import bank statement"
+          >
+            <Upload className="w-4 h-4 sm:mr-1.5 text-slate-500" />
+            <span className="hidden sm:inline">Import</span>
+          </Button>
+
+          <Button
+            variant="outline"
             onClick={() => setExportModalOpen(true)}
             className="shrink-0 h-10 sm:h-9 px-3 sm:px-3.5 rounded-xl border-slate-200 text-slate-600 hover:text-teal-600 hover:bg-teal-50"
             aria-label="Export transactions"
@@ -454,6 +473,18 @@ export function Transaction() {
         accounts={accounts}
         isExporting={isExporting}
         onExport={handleExport}
+      />
+
+      <StatementImportWizard
+        open={importWizardOpen}
+        onOpenChange={setImportWizardOpen}
+        accounts={accounts}
+        onComplete={() => {
+          loadData();
+          fetchAccounts();
+          fetchDescriptions();
+          refreshTransactions();
+        }}
       />
 
       {/* Delete Confirmation Modal */}

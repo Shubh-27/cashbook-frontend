@@ -16,6 +16,15 @@ import type {
   ExportTransactionsDto,
   DeleteResponse,
   DatabaseImportResponse,
+  StatementImportAnalysis,
+  CommitStatementImportDto,
+  StatementImportCommitResult,
+  ImportProfile,
+  ImportBatch,
+  ImportProfilePreview,
+  VersionedImportProfile,
+  VersionedImportProfileResult,
+  VersionedImportProfileRule,
 } from '@/types';
 import { ValidationError } from '@/utils/validation';
 import { API_BASE_URL } from '@/config/constants';
@@ -28,7 +37,7 @@ async function requestRaw(path: string, options: RequestInit = {}): Promise<Resp
   const res = await fetch(url, options);
 
   if (!res.ok) {
-    let errorData: { message?: string; errors?: Record<string, string[] | string> } | undefined;
+    let errorData: { message?: string; errors?: Record<string, string[] | string>; problems?: Array<{ message?: string }> } | undefined;
     let textError = '';
     try {
       const text = await res.text();
@@ -50,7 +59,10 @@ async function requestRaw(path: string, options: RequestInit = {}): Promise<Resp
       throw new ValidationError(errorData.message || 'Validation failed', formattedErrors);
     }
 
-    throw new Error(errorData?.message || textError || res.statusText || 'API Request failed');
+    const problems = errorData?.problems?.map(problem => problem.message).filter((message): message is string => Boolean(message));
+    const error = new Error(errorData?.message || problems?.join(' ') || textError || res.statusText || 'API Request failed');
+    Object.assign(error, { code: (errorData as { error?: string } | undefined)?.error });
+    throw error;
   }
 
   return res;
@@ -191,5 +203,56 @@ export const api = {
       signal,
     });
     return res.json() as Promise<DatabaseImportResponse>;
-  }
+  },
+
+  analyzeStatement: async (file: File, options: { sheetName?: string; headerRow?: number; transactionEndRow?: number; profileSID?: string; dateFormat?: string; mapping?: import('@/types').StatementColumnMapping; accountSID?: string } = {}, signal?: AbortSignal): Promise<StatementImportAnalysis> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (options.sheetName) formData.append('sheetName', options.sheetName);
+    if (options.headerRow) formData.append('headerRow', String(options.headerRow));
+    if (options.transactionEndRow) formData.append('transactionEndRow', String(options.transactionEndRow));
+    if (options.profileSID) formData.append('profileSID', options.profileSID);
+    if (options.dateFormat) formData.append('dateFormat', options.dateFormat);
+    if (options.mapping) formData.append('mappingJson', JSON.stringify(options.mapping));
+    if (options.accountSID) formData.append('accountSID', options.accountSID);
+    const res = await requestRaw(API_ENDPOINTS.STATEMENT_IMPORTS.ANALYZE, { method: 'POST', body: formData, signal });
+    return res.json() as Promise<StatementImportAnalysis>;
+  },
+
+  previewImportProfile: async (file: File, worksheetName?: string, signal?: AbortSignal): Promise<ImportProfilePreview> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (worksheetName) formData.append('worksheetName', worksheetName);
+    const res = await requestRaw(API_ENDPOINTS.IMPORT_PROFILES.PREVIEW, { method: 'POST', body: formData, signal });
+    return res.json() as Promise<ImportProfilePreview>;
+  },
+
+  createVersionedImportProfile: async (file: File, rule: VersionedImportProfileRule, signal?: AbortSignal): Promise<VersionedImportProfileResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('rule', JSON.stringify(rule));
+    const res = await requestRaw(API_ENDPOINTS.IMPORT_PROFILES.BASE, { method: 'POST', body: formData, signal });
+    return res.json() as Promise<VersionedImportProfileResult>;
+  },
+
+  updateVersionedImportProfile: async (sid: string, rule: VersionedImportProfileRule, file?: File, signal?: AbortSignal): Promise<VersionedImportProfileResult> => {
+    const formData = new FormData();
+    if (file) formData.append('file', file);
+    formData.append('rule', JSON.stringify(rule));
+    const res = await requestRaw(API_ENDPOINTS.IMPORT_PROFILES.BY_ID(sid), { method: 'PUT', body: formData, signal });
+    return res.json() as Promise<VersionedImportProfileResult>;
+  },
+
+  getVersionedImportProfile: (sid: string, signal?: AbortSignal): Promise<VersionedImportProfile> =>
+    request<VersionedImportProfile>(API_ENDPOINTS.IMPORT_PROFILES.BY_ID(sid), { signal }),
+
+  commitStatementImport: (data: CommitStatementImportDto, signal?: AbortSignal): Promise<StatementImportCommitResult> =>
+    request<StatementImportCommitResult>(API_ENDPOINTS.STATEMENT_IMPORTS.COMMIT, { method: 'POST', body: JSON.stringify(data), signal }),
+
+  listImportProfiles: (data: SearchRequest, signal?: AbortSignal): Promise<PagedResult<ImportProfile>> =>
+    request<PagedResult<ImportProfile>>(API_ENDPOINTS.IMPORT_PROFILES.LIST, { method: 'POST', body: JSON.stringify(data), signal }),
+  getImportProfiles: (signal?: AbortSignal): Promise<ImportProfile[]> => request<ImportProfile[]>(API_ENDPOINTS.STATEMENT_IMPORTS.PROFILES, { signal }),
+  deleteImportProfile: (sid: string, signal?: AbortSignal): Promise<DeleteResponse> => request<DeleteResponse>(API_ENDPOINTS.IMPORT_PROFILES.BY_ID(sid), { method: 'DELETE', signal }),
+  getImportHistory: (signal?: AbortSignal): Promise<ImportBatch[]> => request<ImportBatch[]>(API_ENDPOINTS.STATEMENT_IMPORTS.HISTORY, { signal }),
+  undoStatementImport: (sid: string, signal?: AbortSignal): Promise<DeleteResponse> => request<DeleteResponse>(API_ENDPOINTS.STATEMENT_IMPORTS.UNDO(sid), { method: 'POST', signal }),
 };

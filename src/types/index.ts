@@ -156,3 +156,153 @@ export interface DatabaseImportResponse {
   message: string;
 }
 
+export interface StatementColumnMapping {
+  date?: string | null;
+  description?: string | null;
+  debit?: string | null;
+  credit?: string | null;
+  amount?: string | null;
+  balance?: string | null;
+  notes?: string | null;
+}
+
+export interface StatementImportRow {
+  row_number: number;
+  transaction_date: string | null;
+  description: string | null;
+  debit: number | null;
+  credit: number | null;
+  balance: number | null;
+  notes: string | null;
+  include: boolean;
+  status: 'new' | 'invalid' | 'exact_duplicate' | 'possible_duplicate' | string;
+  issues: string[];
+}
+
+export interface StatementHeaderCandidate {
+  row_number: number;
+  score: number;
+  values: string[];
+}
+
+export interface StatementProfileSampleRow {
+  row_number: number;
+  values: string[];
+}
+
+export interface StatementProfileSample {
+  top_rows: StatementProfileSampleRow[];
+  bottom_rows: StatementProfileSampleRow[];
+  transaction_end_row?: number | null;
+  footer_marker?: string | null;
+}
+
+export interface StatementImportAnalysis {
+  file_name: string;
+  file_type: string;
+  file_hash: string;
+  sheets: string[];
+  selected_sheet: string;
+  header_row: number;
+  transaction_end_row: number | null;
+  header_candidates: StatementHeaderCandidate[];
+  headers: string[];
+  mapping: StatementColumnMapping;
+  date_format: string | null;
+  rows: StatementImportRow[];
+  metadata: Record<string, string>;
+  suggested_profile_sid: string | null;
+  sample: StatementProfileSample;
+}
+
+export interface SaveImportProfileDto {
+  name: string;
+  file_type: string;
+  worksheet_name?: string | null;
+  header_row: number;
+  transaction_end_row?: number | null;
+  headers: string[];
+  mapping: StatementColumnMapping;
+  date_format?: string | null;
+  sample?: StatementProfileSample | null;
+}
+
+export interface CommitStatementImportDto {
+  account_sid: string;
+  file_name: string;
+  file_type: string;
+  file_hash?: string | null;
+  profile_sid?: string | null;
+  save_profile?: SaveImportProfileDto | null;
+  metadata?: Record<string, string>;
+  rows: StatementImportRow[];
+}
+
+export interface StatementImportCommitResult {
+  import_batch_sid: string;
+  imported_rows: number;
+  skipped_duplicate_rows: number;
+  invalid_rows: number;
+}
+
+export interface ImportProfile extends SaveImportProfileDto {
+  import_profile_sid: string;
+}
+
+export interface ImportBatch {
+  import_batch_sid: string;
+  source_file_name: string;
+  profile_name?: string | null;
+  account_name?: string | null;
+  total_rows: number;
+  imported_rows: number;
+  skipped_duplicate_rows: number;
+  invalid_rows: number;
+  created_date_time?: string | null;
+  undone_date_time?: string | null;
+}
+
+export interface ImportProfilePreviewRow { row_number: number; cells: string[]; }
+export interface ImportProfilePreview {
+  cell_value_format: 'formatted_text';
+  file_type: string;
+  worksheets: string[];
+  selected_worksheet: string;
+  first_rows: ImportProfilePreviewRow[];
+  last_rows: ImportProfilePreviewRow[];
+  divider_after_row: number | null;
+  total_rows: number;
+  detected_header_row: number | null;
+  footer_candidate_rows: number[];
+  secondary_table_candidate_rows: number[];
+  has_ambiguous_date_format: boolean;
+}
+
+export interface VersionedImportProfileRule {
+  name: string;
+  worksheet_name?: string | null;
+  header_row: number;
+  end_row: number;
+  date_format?: string | null;
+  date?: number;
+  description?: number;
+  debit?: number;
+  credit?: number;
+  amount?: number;
+  balance?: number;
+  notes?: number;
+  secondary_table_marker_row?: number;
+}
+
+export interface VersionedImportProfileResult {
+  import_profile_sid: string;
+  version_number: number;
+}
+
+export interface VersionedImportProfile extends VersionedImportProfileRule {
+  import_profile_sid: string;
+  version_number: number;
+  file_type: string;
+  sample: StatementProfileSample;
+}
+

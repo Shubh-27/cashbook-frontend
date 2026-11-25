@@ -18,8 +18,13 @@ import { ROUTES, buildTransactionsUrl } from '@/config/routes';
 
 export function Dashboard() {
   const accounts = useAppStore(state => state.accounts);
+  const ensureAccountsLoaded = useAppStore(state => state.ensureAccountsLoaded);
   const setQuickAddOpen = useAppStore(state => state.setQuickAddOpen);
   const lastTransactionUpdate = useAppStore(state => state.lastTransactionUpdate);
+
+  useEffect(() => {
+    void ensureAccountsLoaded();
+  }, [ensureAccountsLoaded]);
   const navigate = useNavigate();
   const [recentTransactions, setRecentTransactions] = useState<VwTransactionList[]>([]);
   const [isLoading, setIsLoading] = useState(true);

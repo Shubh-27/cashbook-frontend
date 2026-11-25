@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { useAppStore } from '@/store';
 import { api } from '@/services/api';
@@ -20,7 +20,15 @@ export function AddTransactionModal() {
   const descriptions = useAppStore(state => state.descriptions);
   const fetchAccounts = useAppStore(state => state.fetchAccounts);
   const fetchDescriptions = useAppStore(state => state.fetchDescriptions);
+  const ensureAccountsLoaded = useAppStore(state => state.ensureAccountsLoaded);
+  const ensureDescriptionsLoaded = useAppStore(state => state.ensureDescriptionsLoaded);
   const refreshTransactions = useAppStore(state => state.refreshTransactions);
+
+  useEffect(() => {
+    if (!open) return;
+    void ensureAccountsLoaded();
+    void ensureDescriptionsLoaded();
+  }, [open, ensureAccountsLoaded, ensureDescriptionsLoaded]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<TransactionFormHandle>(null);

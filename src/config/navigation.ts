@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ArrowLeftRight, Building2, FileText, Settings, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Building2, FileText, FileSpreadsheet, Settings, type LucideIcon } from 'lucide-react';
 import { ROUTES } from './routes';
 
 export type NavIcon = LucideIcon | React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
@@ -49,6 +49,13 @@ export const NAV_ITEMS: NavItem[] = [
     showInSidebar: true,
   },
   {
+    name: 'Import Profiles',
+    path: ROUTES.IMPORT_PROFILES,
+    icon: FileSpreadsheet,
+    showInBottomNav: false,
+    showInSidebar: true,
+  },
+  {
     name: 'Settings',
     path: ROUTES.SETTINGS,
     icon: Settings,
@@ -61,6 +68,8 @@ export const SIDEBAR_NAV_ITEMS = NAV_ITEMS.filter(item => item.showInSidebar !==
 export const BOTTOM_NAV_ITEMS = NAV_ITEMS.filter(item => item.showInBottomNav);
 
 export const getPageTitle = (pathname: string): string => {
-  const match = NAV_ITEMS.find(item => item.path === pathname);
+  const match = NAV_ITEMS.find(
+    item => item.path === pathname || (item.path !== '/' && pathname.startsWith(`${item.path}/`))
+  );
   return match ? match.name : 'CashBook';
 };
