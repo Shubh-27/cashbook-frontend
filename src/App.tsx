@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 import { useKeyboardShortcut } from './hooks/useKeyboardShortcut';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
@@ -12,19 +12,15 @@ import { ROUTES } from './config/routes';
 
 const Dashboard = lazy(() => import('./pages/dashboard/page').then(m => ({ default: m.Dashboard })));
 const Transaction = lazy(() => import('./pages/transactions/page').then(m => ({ default: m.Transaction })));
+const StatementImportPage = lazy(() => import('./pages/transactions/import/page').then(m => ({ default: m.StatementImportPage })));
 const AccountManager = lazy(() => import('./pages/accounts/page').then(m => ({ default: m.AccountManager })));
 const Descriptions = lazy(() => import('./pages/descriptions/page').then(m => ({ default: m.Descriptions })));
+const ImportProfiles = lazy(() => import('./pages/import-profiles/page').then(m => ({ default: m.ImportProfiles })));
+const ImportProfileEditorPage = lazy(() => import('./pages/import-profiles/editor/page').then(m => ({ default: m.ImportProfileEditorPage })));
 const SettingsPage = lazy(() => import('./pages/settings/page').then(m => ({ default: m.SettingsPage })));
 
 function App() {
-  const fetchAccounts = useAppStore(state => state.fetchAccounts);
-  const fetchDescriptions = useAppStore(state => state.fetchDescriptions);
   const setQuickAddOpen = useAppStore(state => state.setQuickAddOpen);
-
-  useEffect(() => {
-    fetchAccounts();
-    fetchDescriptions();
-  }, [fetchAccounts, fetchDescriptions]);
 
   useKeyboardShortcut('mod+shift+enter', () => {
     setQuickAddOpen(true);
@@ -39,8 +35,12 @@ function App() {
           <Route element={<Layout />}>
             <Route path={ROUTES.DASHBOARD} element={<Dashboard />} />
             <Route path={ROUTES.TRANSACTIONS} element={<Transaction />} />
+            <Route path={ROUTES.TRANSACTIONS_IMPORT} element={<StatementImportPage />} />
             <Route path={ROUTES.ACCOUNTS} element={<AccountManager />} />
             <Route path={ROUTES.DESCRIPTIONS} element={<Descriptions />} />
+            <Route path={ROUTES.IMPORT_PROFILES} element={<ImportProfiles />} />
+            <Route path={ROUTES.IMPORT_PROFILE_NEW} element={<ImportProfileEditorPage />} />
+            <Route path={ROUTES.IMPORT_PROFILE_EDIT} element={<ImportProfileEditorPage />} />
             <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
           </Route>
         </Routes>

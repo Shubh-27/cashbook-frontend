@@ -10,8 +10,20 @@ lerna-debug.log*
 # Dependency directories
 node_modules/
 dist/
+dist-web/
 dist-ssr
 *.local
+
+# Local data and secrets
+.env*
+*.db
+*.db-shm
+*.db-wal
+*.bak
+*.pfx
+*.p12
+*.key
+*.pem
 
 # Editor folders and files
 .vscode/*

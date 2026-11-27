@@ -1,4 +1,5 @@
 export * from './DataTable';
+export * from './InnerPageHeader';
 export * from './MobileSortSheet';
 export * from './PaginationControls';
 export * from './SearchInput';

@@ -2,8 +2,12 @@ export const ROUTES = {
   HOME: '/',
   DASHBOARD: '/',
   TRANSACTIONS: '/transactions',
+  TRANSACTIONS_IMPORT: '/transactions/import',
   ACCOUNTS: '/accounts',
   DESCRIPTIONS: '/descriptions',
+  IMPORT_PROFILES: '/import-profiles',
+  IMPORT_PROFILE_NEW: '/import-profiles/new',
+  IMPORT_PROFILE_EDIT: '/import-profiles/:profileSID',
   SETTINGS: '/settings',
 } as const;
 

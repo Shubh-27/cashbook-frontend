@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Download, Upload, Database, AlertTriangle, Smartphone, CheckCircle2, Share, PlusSquare, Sparkles, MoreVertical, Info } from 'lucide-react';
-import { api } from '@/services/api';
+import React, { useRef, useState } from 'react';
+import { Download, Upload, Database, AlertTriangle, Smartphone, CheckCircle2, Share, PlusSquare, Sparkles, MoreVertical, Info, RefreshCw } from 'lucide-react';
+import { api } from '@/api';
 import { useAppStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { usePwaInstall } from '@/hooks/usePwaInstall';
+import { useAppUpdater } from '@/hooks/useAppUpdater';
 import {
   Dialog,
   DialogContent,
@@ -17,9 +18,23 @@ import {
 
 export function SettingsPage() {
   const { isElectron, isStandalone, isIOS, isAndroid, hasNativePrompt, isInstalling, installApp } = usePwaInstall();
+  const {
+    isElectron: hasElectronUpdater,
+    appVersion,
+    state: updateState,
+    version: updateVersion,
+    percent: updatePercent,
+    message: updateErrorMessage,
+    manualOnly: updateManualOnly,
+    upToDate: updateUpToDate,
+    check: checkForUpdates,
+    install: installUpdate,
+    openDownloadPage,
+  } = useAppUpdater();
   const fetchAccounts = useAppStore(state => state.fetchAccounts);
   const refreshTransactions = useAppStore(state => state.refreshTransactions);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+  const dbFileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -54,8 +69,9 @@ export function SettingsPage() {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (file) {
       if (!file.name.endsWith('.db')) {
         setMessage({ text: 'Please select a valid .db file.', type: 'error' });
         setSelectedFile(null);
@@ -100,6 +116,85 @@ export function SettingsPage() {
       </div>
 
       <div className="grid gap-6">
+        {/* Electron App Updates Section - Only shown when running in Electron */}
+        {hasElectronUpdater && (
+          <section className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="p-2.5 bg-teal-50 rounded-xl border border-teal-100/80 text-teal-600">
+                <RefreshCw className="w-5 h-5 md:w-6 md:h-6" />
+              </div>
+              <div>
+                <h2 className="text-base md:text-lg font-bold text-slate-900">App Updates</h2>
+                <p className="text-slate-500 text-xs md:text-sm">
+                  Current version: <span className="font-mono font-semibold text-slate-700">{appVersion ? `v${appVersion}` : '—'}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 md:p-5 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="space-y-1">
+                <p className="font-semibold text-slate-900 text-sm md:text-base">
+                  {updateState === 'checking'
+                    ? 'Checking for updates...'
+                    : updateState === 'available'
+                      ? `Update available (v${updateVersion})`
+                      : updateState === 'downloading'
+                        ? `Downloading update v${updateVersion} (${updatePercent}%)`
+                        : updateState === 'downloaded'
+                          ? `Update v${updateVersion} ready to install`
+                          : updateState === 'error'
+                            ? 'Update check failed'
+                            : updateUpToDate
+                              ? 'You are up to date'
+                              : 'Desktop application updates'}
+                </p>
+                <p className={`text-xs md:text-sm ${updateState === 'error' ? 'text-red-600' : 'text-slate-500'}`}>
+                  {updateState === 'error'
+                    ? updateErrorMessage || 'Unable to check for updates right now.'
+                    : updateState === 'downloaded'
+                      ? 'Restart CashBook to apply the downloaded update.'
+                      : updateState === 'available' && updateManualOnly
+                        ? 'Download the latest release from GitHub.'
+                        : updateUpToDate
+                          ? 'CashBook is running the latest available version.'
+                          : 'Checks GitHub Releases for new CashBook versions.'}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                {updateState === 'downloaded' ? (
+                  <Button
+                    onClick={() => void installUpdate()}
+                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl px-5 h-10 shadow-sm font-medium"
+                  >
+                    Restart now
+                  </Button>
+                ) : updateState === 'available' && updateManualOnly ? (
+                  <Button
+                    onClick={() => void openDownloadPage()}
+                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl px-5 h-10 shadow-sm font-medium"
+                  >
+                    Open download page
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => void checkForUpdates()}
+                    disabled={updateState === 'checking' || updateState === 'downloading'}
+                    className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl px-5 h-10 shadow-sm font-medium"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-2 ${updateState === 'checking' ? 'animate-spin' : ''}`} />
+                    {updateState === 'checking'
+                      ? 'Checking...'
+                      : updateState === 'downloading'
+                        ? `Downloading ${updatePercent}%`
+                        : 'Check for updates'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* PWA App Installation Section - Only shown when NOT running in Electron */}
         {!isElectron && (
           <section className="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200/80">
@@ -216,17 +311,37 @@ export function SettingsPage() {
                 </div>
                 
                 <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-                  <div className="flex-1">
-                    <Label htmlFor="db-file" className="mb-1.5 block text-xs md:text-sm font-semibold text-slate-700">
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <Label htmlFor="db-file" className="text-xs font-semibold text-slate-600">
                       Select Backup File (.db)
                     </Label>
-                    <Input 
-                      id="db-file" 
-                      type="file" 
+                    <Input
+                      ref={dbFileInputRef}
+                      id="db-file"
+                      type="file"
                       accept=".db"
                       onChange={handleFileChange}
-                      className="rounded-xl border-slate-200 cursor-pointer bg-white file:bg-slate-50 file:text-teal-700 file:font-semibold text-xs md:text-sm h-10"
+                      className="sr-only"
                     />
+                    <div className="flex h-10 items-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+                      <button
+                        type="button"
+                        className="inline-flex h-full shrink-0 cursor-pointer items-center gap-1.5 border-r border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500"
+                        onClick={() => dbFileInputRef.current?.click()}
+                      >
+                        <Upload className="h-3.5 w-3.5 text-slate-500" />
+                        {selectedFile ? 'Replace file' : 'Choose file'}
+                      </button>
+                      {selectedFile ? (
+                        <span className="min-w-0 flex-1 truncate px-3 text-sm text-slate-700" title={selectedFile.name}>
+                          {selectedFile.name}
+                        </span>
+                      ) : (
+                        <span className="min-w-0 flex-1 truncate px-3 text-sm text-muted-foreground">
+                          No file selected
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <Button 
                     onClick={handleImportClick} 
@@ -405,3 +520,5 @@ export function SettingsPage() {
     </div>
   );
 }
+
+export default SettingsPage;

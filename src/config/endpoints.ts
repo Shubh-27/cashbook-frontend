@@ -21,4 +21,17 @@ export const API_ENDPOINTS = {
     EXPORT: '/database/export',
     IMPORT: '/database/import',
   },
+  STATEMENT_IMPORTS: {
+    ANALYZE: '/statement-imports/analyze',
+    COMMIT: '/statement-imports/commit',
+    PROFILES: '/statement-imports/profiles',
+    HISTORY: '/statement-imports/history',
+    UNDO: (sid: string) => `/statement-imports/history/${encodeURIComponent(sid)}/undo`,
+  },
+  IMPORT_PROFILES: {
+    LIST: '/import-profiles/list',
+    BASE: '/import-profiles',
+    PREVIEW: '/import-profiles/preview',
+    BY_ID: (sid: string) => `/import-profiles/${encodeURIComponent(sid)}`,
+  },
 } as const;

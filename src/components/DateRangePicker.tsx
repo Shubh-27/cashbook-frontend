@@ -6,13 +6,15 @@ import { format } from 'date-fns';
 import { type DateRange, presets, formatDateRangeLabel, getCurrentFinancialYearStart } from '../utils/date';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { cn } from '@/lib/utils';
 
 interface DateRangePickerProps {
   range: DateRange | null;
   onChange: (range: DateRange | null) => void;
+  className?: string;
 }
 
-export function DateRangePicker({ range, onChange }: DateRangePickerProps) {
+export function DateRangePicker({ range, onChange, className }: DateRangePickerProps) {
   const [open, setOpen] = useState(false);
 
   const handlePreset = (presetFn: () => DateRange) => {
@@ -52,9 +54,11 @@ export function DateRangePicker({ range, onChange }: DateRangePickerProps) {
           role="button"
           tabIndex={0}
           aria-label="Select date range"
-          className={`flex items-center justify-start text-left font-normal h-9 bg-white border border-slate-200 rounded-xl px-3 cursor-pointer hover:bg-slate-50 transition-colors text-xs sm:text-sm shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
-            !range ? "text-slate-500" : "border-teal-500 text-teal-700 bg-teal-50/50"
-          }`}
+          className={cn(
+            'flex items-center justify-start text-left font-normal h-9 bg-white border border-slate-200 rounded-xl px-3 cursor-pointer hover:bg-slate-50 transition-colors text-xs sm:text-sm shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500',
+            !range ? 'text-slate-500' : 'border-teal-500 text-teal-700 bg-teal-50/50',
+            className
+          )}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
@@ -62,13 +66,13 @@ export function DateRangePicker({ range, onChange }: DateRangePickerProps) {
             }
           }}
         >
-          <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-slate-400 shrink-0" />
-          <span className="truncate max-w-[170px] sm:max-w-[240px] font-medium">{formatDateRangeLabel(range)}</span>
+          <CalendarIcon className="mr-2 h-4 w-4 text-slate-400 shrink-0" />
+          <span className="min-w-0 flex-1 truncate font-medium">{formatDateRangeLabel(range)}</span>
           {range && (
             <button
               type="button"
               aria-label="Clear date range"
-              className="ml-1.5 p-0.5 text-slate-400 hover:text-rose-500 transition-colors shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 cursor-pointer"
+              className="ml-2 p-0.5 text-slate-400 hover:text-rose-500 transition-colors shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 cursor-pointer"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

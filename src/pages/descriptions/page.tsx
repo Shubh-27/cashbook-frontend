@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { useAppStore } from '@/store';
-import { api } from '@/services/api';
+import { api } from '@/api';
 import { rules, validateField, ValidationError } from '@/utils/validation';
 import {
   createColumnHelper,
@@ -74,6 +74,7 @@ export function Descriptions() {
         return;
       }
       console.error('Failed to load descriptions:', e);
+      toast.error(e instanceof Error ? e.message : 'Failed to load descriptions');
     }
   }, [page, sortBy, sortOrder, search, limit]);
 
@@ -136,6 +137,7 @@ export function Descriptions() {
         setErrors(backendErrors);
       } else {
         console.error(e);
+        toast.error(e instanceof Error ? e.message : 'Failed to update description');
       }
     }
   };
@@ -166,6 +168,7 @@ export function Descriptions() {
         setErrors(backendErrors);
       } else {
         console.error(e);
+        toast.error(e instanceof Error ? e.message : 'Failed to update description');
       }
     }
   };
@@ -189,9 +192,9 @@ export function Descriptions() {
       header: 'ACTIONS',
       cell: info => (
         <div className="flex gap-1">
-          <Button variant="ghost" size="icon" onClick={() => handleDescriptionClick(info.row.original.description_sid)} aria-label="View activity" className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><ArrowUpRight className="w-4 h-4" /></Button>
-          <Button variant="ghost" size="icon" onClick={() => setEditingDesc(info.row.original)} aria-label="Edit description" className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"><Pencil className="w-4 h-4" /></Button>
-          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(info.row.original)} aria-label="Delete description" className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"><Trash2 className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => handleDescriptionClick(info.row.original.description_sid)} aria-label="View activity" title="View activity" className="h-8 w-8 rounded-lg text-slate-400 transition-colors hover:bg-teal-100/70 hover:text-teal-600"><ArrowUpRight className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setEditingDesc(info.row.original)} aria-label="Edit description" title="Edit description" className="h-8 w-8 rounded-lg text-slate-400 transition-colors hover:bg-teal-100/70 hover:text-teal-600"><Pencil className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="icon" onClick={() => setDeleteTarget(info.row.original)} aria-label="Delete description" title="Delete description" className="h-8 w-8 rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"><Trash2 className="w-4 h-4" /></Button>
         </div>
       ),
     })
@@ -220,7 +223,7 @@ export function Descriptions() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6 animate-in fade-in duration-300 md:h-full flex-1 min-h-0">
+    <div className="flex flex-col gap-3 md:gap-6 animate-in fade-in duration-300 md:h-full flex-1 min-h-0">
       {/* Header with Search and Add button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div className="hidden md:block">
@@ -248,6 +251,7 @@ export function Descriptions() {
             onClick={() => setIsAdding(true)}
             className="rounded-xl font-medium shrink-0 h-10 sm:h-9 px-3 sm:px-3.5 bg-teal-600 hover:bg-teal-700 text-white"
             aria-label="Add description"
+            title="Add description"
           >
             <Plus className="w-4 h-4 sm:mr-1.5" />
             <span className="hidden sm:inline">Add Description</span>
@@ -338,3 +342,5 @@ export function Descriptions() {
     </div>
   );
 }
+
+export default Descriptions;

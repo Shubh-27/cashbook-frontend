@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { useAppStore } from '@/store';
-import { api } from '@/services/api';
+import { api } from '@/api';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -20,7 +20,15 @@ export function AddTransactionModal() {
   const descriptions = useAppStore(state => state.descriptions);
   const fetchAccounts = useAppStore(state => state.fetchAccounts);
   const fetchDescriptions = useAppStore(state => state.fetchDescriptions);
+  const ensureAccountsLoaded = useAppStore(state => state.ensureAccountsLoaded);
+  const ensureDescriptionsLoaded = useAppStore(state => state.ensureDescriptionsLoaded);
   const refreshTransactions = useAppStore(state => state.refreshTransactions);
+
+  useEffect(() => {
+    if (!open) return;
+    void ensureAccountsLoaded();
+    void ensureDescriptionsLoaded();
+  }, [open, ensureAccountsLoaded, ensureDescriptionsLoaded]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef<TransactionFormHandle>(null);
@@ -44,7 +52,7 @@ export function AddTransactionModal() {
         account_sid: values.account_sid,
         transaction_date: dateObj.toISOString(),
         description_name: values.description_name,
-        description_sid: values.description_sid || '',
+        description_sid: values.description_sid || null,
         debit: values.type === 'DEBIT' ? val : 0,
         credit: values.type === 'CREDIT' ? val : 0,
         notes: values.notes || ''

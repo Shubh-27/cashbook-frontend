@@ -1,11 +1,12 @@
 import React from 'react';
-import { LayoutDashboard, ArrowLeftRight, Building2, FileText, Settings, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Building2, FileText, FileSpreadsheet, Settings, type LucideIcon } from 'lucide-react';
 import { ROUTES } from './routes';
 
 export type NavIcon = LucideIcon | React.ComponentType<{ className?: string; strokeWidth?: number | string }>;
 
 export interface NavItem {
   name: string;
+  shortName?: string;
   path: string;
   icon: NavIcon;
   showInBottomNav?: boolean;
@@ -49,6 +50,14 @@ export const NAV_ITEMS: NavItem[] = [
     showInSidebar: true,
   },
   {
+    name: 'Import Profiles',
+    shortName: 'Profiles',
+    path: ROUTES.IMPORT_PROFILES,
+    icon: FileSpreadsheet,
+    showInBottomNav: true,
+    showInSidebar: true,
+  },
+  {
     name: 'Settings',
     path: ROUTES.SETTINGS,
     icon: Settings,
@@ -61,6 +70,25 @@ export const SIDEBAR_NAV_ITEMS = NAV_ITEMS.filter(item => item.showInSidebar !==
 export const BOTTOM_NAV_ITEMS = NAV_ITEMS.filter(item => item.showInBottomNav);
 
 export const getPageTitle = (pathname: string): string => {
-  const match = NAV_ITEMS.find(item => item.path === pathname);
+  if (pathname === ROUTES.TRANSACTIONS_IMPORT) return 'Import Statement';
+  if (pathname === ROUTES.IMPORT_PROFILE_NEW) return 'Create Import Profile';
+  if (pathname.startsWith(`${ROUTES.IMPORT_PROFILES}/`)) return 'Edit Import Profile';
+
+  const match = NAV_ITEMS.find(
+    item => item.path === pathname || (item.path !== '/' && pathname.startsWith(`${item.path}/`))
+  );
   return match ? match.name : 'CashBook';
+};
+
+export const getMobileHeaderMeta = (pathname: string): { eyebrow: string; title: string; backTo?: string } => {
+  if (pathname === ROUTES.TRANSACTIONS_IMPORT) {
+    return { eyebrow: 'Transactions', title: 'Import Statement', backTo: ROUTES.TRANSACTIONS };
+  }
+  if (pathname === ROUTES.IMPORT_PROFILE_NEW) {
+    return { eyebrow: 'Import Profiles', title: 'Create Import Profile', backTo: ROUTES.IMPORT_PROFILES };
+  }
+  if (pathname.startsWith(`${ROUTES.IMPORT_PROFILES}/`)) {
+    return { eyebrow: 'Import Profiles', title: 'Edit Import Profile', backTo: ROUTES.IMPORT_PROFILES };
+  }
+  return { eyebrow: 'CashBook', title: getPageTitle(pathname) };
 };

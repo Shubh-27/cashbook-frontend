@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+@import 'react-data-grid/lib/styles.css';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -132,6 +133,30 @@ body {
   touch-action: manipulation;
 }
 
+@layer base {
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a[href],
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role='button'][aria-disabled='true'],
+  select:disabled,
+  input:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
+  input[type='date'] {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 0;
+  }
+}
+
 /* Safe area support for iOS / Android gestures & notches */
 .pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
@@ -149,7 +174,7 @@ body {
 
 @media (max-width: 767px) {
   .mobile-scroll {
-    padding-bottom: calc(var(--bottom-nav-height, 4.5rem) + env(safe-area-inset-bottom, 0px) + 2rem);
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px) * 0.55);
   }
 }
 
@@ -233,5 +258,33 @@ body {
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* Hide native scrollbars on the statement preview grid; custom overlay scrollbars render over cells */
+.rdg {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.rdg::-webkit-scrollbar {
+  display: none;
+}
+
+/* Match corner cell selection/focus ring to the outer rounded-xl (12px) border */
+.rdg [role='gridcell'][aria-selected='true'],
+.rdg [role='columnheader'][aria-selected='true'] {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--rdg-selection-color);
+}
+.rdg [role='row']:first-of-type > [role='columnheader']:first-child {
+  border-top-left-radius: 11px;
+}
+.rdg [role='row']:first-of-type > [role='columnheader']:last-child {
+  border-top-right-radius: 11px;
+}
+.rdg .rdg-last-row > [role='gridcell']:first-child {
+  border-bottom-left-radius: 11px;
+}
+.rdg .rdg-last-row > [role='gridcell']:last-child {
+  border-bottom-right-radius: 11px;
 }
 

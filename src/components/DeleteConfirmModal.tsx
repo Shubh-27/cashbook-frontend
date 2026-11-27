@@ -16,6 +16,7 @@ interface DeleteConfirmModalProps {
   title?: string;
   description?: string;
   itemName?: string;
+  isDeleting?: boolean;
 }
 
 export function DeleteConfirmModal({
@@ -25,6 +26,7 @@ export function DeleteConfirmModal({
   title = "Confirm Deletion",
   description = "Are you sure you want to delete this item? This action cannot be undone.",
   itemName,
+  isDeleting = false,
 }: DeleteConfirmModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -55,13 +57,14 @@ export function DeleteConfirmModal({
           <Button
             variant="destructive"
             type="button"
+            disabled={isDeleting}
             onClick={() => {
               onConfirm();
               onOpenChange(false);
             }}
             className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl flex-1 sm:flex-none font-semibold shadow-sm"
           >
-            Delete Item
+            {isDeleting ? 'Deleting...' : 'Delete Item'}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowUpDown, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLockBodyScroll } from '@/hooks/useLockBodyScroll';
 
 export interface MobileSortOption {
   id: string;
@@ -31,6 +33,8 @@ export function MobileSortSheet({
 }: MobileSortSheetProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  useLockBodyScroll(sheetOpen);
+
   const handleSelectOption = (option: MobileSortOption) => {
     onSortChange(option.field, option.order);
     setSheetOpen(false);
@@ -49,16 +53,16 @@ export function MobileSortSheet({
       </Button>
 
       {/* Mobile Sliding Bottom Sheet Modal */}
-      {sheetOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+      {sheetOpen && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-50 flex flex-col justify-end md:hidden">
           {/* Backdrop */}
           <div
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs touch-none transition-opacity animate-in fade-in duration-200"
             onClick={() => setSheetOpen(false)}
           />
 
           {/* Sheet Container */}
-          <div className="relative z-10 bg-white rounded-t-[28px] border-t border-slate-200 shadow-2xl p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-250 flex flex-col gap-4">
+          <div className="relative z-10 bg-white rounded-t-[28px] border-t border-slate-200 shadow-2xl p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] max-h-[85vh] overflow-y-auto overscroll-contain animate-in slide-in-from-bottom duration-250 flex flex-col gap-4">
             {/* Drag Handle */}
             <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto -mt-1 mb-0.5" />
 
@@ -122,7 +126,8 @@ export function MobileSortSheet({
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
