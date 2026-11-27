@@ -22,7 +22,7 @@ export function Layout() {
 
         {/* Main Content Area — Layout scrolls when content overflows, Desktop tables scroll internally */}
         <div className="flex-1 overflow-x-hidden overflow-y-auto w-full mobile-scroll">
-          <main className="w-full p-4 sm:p-6 md:p-8 max-w-7xl mx-auto min-h-full md:h-full flex flex-col min-h-0">
+          <main className="w-full pt-3 px-4 pb-0 sm:p-6 md:p-8 max-w-7xl mx-auto min-h-full md:h-full flex flex-col min-h-0">
             <ErrorBoundary>
               <Suspense fallback={<PageLoadingFallback />}>
                 <Outlet />

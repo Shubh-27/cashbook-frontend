@@ -1,4 +1,4 @@
-import type { Account } from '@/types';
+import type { Account, VwAccountList } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,7 @@ export interface TransactionExportModalProps {
   mergeDescriptions: boolean;
   onMergeDescriptionsChange: (val: boolean) => void;
   selectedAccountSids: string[];
-  accounts: Account[];
+  accounts: (Account | VwAccountList)[];
   isExporting: boolean;
   onExport: () => void;
 }
@@ -67,9 +67,9 @@ export function TransactionExportModal({
 
         <div className="flex flex-col gap-4 py-2">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-600">Export Format</Label>
+            <Label htmlFor="export-format" className="text-xs font-semibold text-slate-600">Export Format</Label>
             <Select value={exportType} onValueChange={onExportTypeChange}>
-              <SelectTrigger className="w-full h-11 rounded-xl bg-white border-slate-200">
+              <SelectTrigger id="export-format" className="w-full h-11 rounded-xl bg-white border-slate-200 text-sm shadow-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
@@ -80,8 +80,9 @@ export function TransactionExportModal({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-600">File Name (Optional)</Label>
+            <Label htmlFor="export-file-name" className="text-xs font-semibold text-slate-600">File Name (Optional)</Label>
             <Input
+              id="export-file-name"
               placeholder="e.g. My_Cashbook_Export"
               value={excelName}
               onChange={(e) => onExcelNameChange(e.target.value)}

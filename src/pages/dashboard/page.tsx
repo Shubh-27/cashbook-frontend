@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from '@/store';
-import { api } from '@/services/api';
+import { api } from '@/api';
 import type { VwTransactionList } from '@/types';
 import {
   ArrowLeftRight,
@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 import { format, parseISO, isValid } from 'date-fns';
 
 import { ROUTES, buildTransactionsUrl } from '@/config/routes';
@@ -54,6 +55,7 @@ export function Dashboard() {
         return;
       }
       console.error('Failed to load recent transactions:', e);
+      toast.error(e instanceof Error ? e.message : 'Failed to load recent transactions');
     } finally {
       if (!abortController.signal.aborted) {
         setIsLoading(false);
@@ -221,8 +223,10 @@ export function Dashboard() {
             </div>
           ) : (
             recentTransactions.map((tx) => {
-              const isDebit = tx.debit > 0;
-              const amount = isDebit ? tx.debit : tx.credit;
+              const debit = tx.debit ?? 0;
+              const credit = tx.credit ?? 0;
+              const isDebit = debit > 0;
+              const amount = isDebit ? debit : credit;
               const acc = tx.account_sid ? accounts.find(a => a.account_sid === tx.account_sid) : undefined;
 
               return (
@@ -292,4 +296,6 @@ export function Dashboard() {
     </div>
   );
 }
+
+export default Dashboard;
 

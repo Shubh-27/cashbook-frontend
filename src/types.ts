@@ -6,28 +6,19 @@ export interface Account {
   last_modified_date_time?: string | null;
   last_modified_by_user_id?: number | null;
   status?: number;
-  transaction_count?: number;
   balance?: number | null;
 }
 
 export interface Description {
   description_sid: string;
   description_name: string;
-  created_date_time?: string | null;
-  created_by_user_id?: number | null;
   last_modified_date_time?: string | null;
-  last_modified_by_user_id?: number | null;
   status?: number;
-  usage_count?: number;
 }
 
 export interface Transaction {
   transaction_sid: string;
   transaction_date: string;
-  account_sid?: string | null;
-  account_name?: string | null;
-  description_sid?: string | null;
-  description_name?: string | null;
   description?: Description;
   account?: Account;
   debit: number | null;
@@ -67,10 +58,10 @@ export interface PagedResult<T> {
 
 export interface VwTransactionList {
   transaction_sid: string;
-  transaction_date: string;
-  debit: number;
-  credit: number;
-  balance: number;
+  transaction_date: string | null;
+  debit: number | null;
+  credit: number | null;
+  balance: number | null;
   notes: string | null;
   status: number;
   account_sid: string | null;
@@ -305,4 +296,22 @@ export interface VersionedImportProfile extends VersionedImportProfileRule {
   file_type: string;
   sample: StatementProfileSample;
 }
+
+export interface TransactionFormValues {
+  type: 'DEBIT' | 'CREDIT';
+  account_sid: string;
+  transaction_date: string; // YYYY-MM-DD
+  amount: string;
+  description_name: string;
+  description_sid?: string;
+  notes?: string;
+  fastEntry?: boolean;
+}
+
+export interface FilterOption {
+  value: string;
+  label: string;
+  subLabel?: string;
+}
+
 

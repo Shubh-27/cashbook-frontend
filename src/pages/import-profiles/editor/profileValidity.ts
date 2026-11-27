@@ -15,7 +15,6 @@ export function isProfileValid(state: EditorState, preview: Pick<ImportProfilePr
   if (state.endRow === undefined) problems.push('Select where transactions end.');
   if (state.headerRow !== undefined && state.endRow !== undefined && state.endRow <= state.headerRow) problems.push('Transactions must end after the header row.');
   if (!mapped(state, 'date')) problems.push('Map the Date column.');
-  if (!mapped(state, 'description')) problems.push('Map the Description column.');
 
   const hasAmount = mapped(state, 'amount');
   const hasDebitOrCredit = mapped(state, 'debit') || mapped(state, 'credit');

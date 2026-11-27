@@ -133,6 +133,30 @@ body {
   touch-action: manipulation;
 }
 
+@layer base {
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a[href],
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role='button'][aria-disabled='true'],
+  select:disabled,
+  input:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+
+  input[type='date'] {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 0;
+  }
+}
+
 /* Safe area support for iOS / Android gestures & notches */
 .pb-safe {
   padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
@@ -150,7 +174,7 @@ body {
 
 @media (max-width: 767px) {
   .mobile-scroll {
-    padding-bottom: calc(var(--bottom-nav-height, 4.5rem) + env(safe-area-inset-bottom, 0px) + 2rem);
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px) * 0.55);
   }
 }
 
@@ -236,47 +260,31 @@ body {
   scrollbar-width: none;
 }
 
-/* Subtle, clean scrollbars inside the statement preview grid */
+/* Hide native scrollbars on the statement preview grid; custom overlay scrollbars render over cells */
 .rdg {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 116, 139, 0.45) #f8fafc;
-}
-.dark .rdg {
-  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 45%, transparent) var(--muted);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 .rdg::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  display: none;
 }
-.rdg::-webkit-scrollbar-track,
-.rdg::-webkit-scrollbar-track-piece,
-.rdg::-webkit-scrollbar-corner {
-  background: #f8fafc;
+
+/* Match corner cell selection/focus ring to the outer rounded-xl (12px) border */
+.rdg [role='gridcell'][aria-selected='true'],
+.rdg [role='columnheader'][aria-selected='true'] {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--rdg-selection-color);
 }
-.dark .rdg::-webkit-scrollbar-track,
-.dark .rdg::-webkit-scrollbar-track-piece,
-.dark .rdg::-webkit-scrollbar-corner {
-  background: var(--muted);
+.rdg [role='row']:first-of-type > [role='columnheader']:first-child {
+  border-top-left-radius: 11px;
 }
-.rdg::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.45);
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+.rdg [role='row']:first-of-type > [role='columnheader']:last-child {
+  border-top-right-radius: 11px;
 }
-.rdg::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.65);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+.rdg .rdg-last-row > [role='gridcell']:first-child {
+  border-bottom-left-radius: 11px;
 }
-.dark .rdg::-webkit-scrollbar-thumb {
-  background: color-mix(in oklab, var(--muted-foreground) 45%, transparent);
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-.dark .rdg::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
-  border: 2px solid transparent;
-  background-clip: padding-box;
+.rdg .rdg-last-row > [role='gridcell']:last-child {
+  border-bottom-right-radius: 11px;
 }
 

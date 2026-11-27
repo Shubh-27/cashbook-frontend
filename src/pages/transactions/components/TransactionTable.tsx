@@ -90,7 +90,8 @@ export function TransactionTable({
             size="icon"
             onClick={() => onEdit(info.row.original)}
             aria-label="Edit transaction"
-            className="h-8 w-8 text-slate-400 hover:text-teal-600 hover:bg-teal-50"
+            title="Edit transaction"
+            className="h-8 w-8 rounded-lg text-slate-400 transition-colors hover:bg-teal-100/70 hover:text-teal-600"
           >
             <Pencil className="w-4 h-4" />
           </Button>
@@ -99,7 +100,8 @@ export function TransactionTable({
             size="icon"
             onClick={() => onDelete(info.row.original)}
             aria-label="Delete transaction"
-            className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+            title="Delete transaction"
+            className="h-8 w-8 rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
           >
             <Trash2 className="w-4 h-4" />
           </Button>

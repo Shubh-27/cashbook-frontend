@@ -1,4 +1,4 @@
-import type { Account, Description, VwTransactionList } from '@/types';
+import type { Account, Description, VwAccountList, VwTransactionList } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import type { TransactionFormValues } from '@/components/common/TransactionForm'
 
 export interface TransactionEditModalProps {
   editingTx: VwTransactionList | null;
-  accounts: Account[];
+  accounts: (Account | VwAccountList)[];
   descriptions: Description[];
   onClose: () => void;
   onSave: (values: TransactionFormValues) => void | Promise<void>;
@@ -22,8 +22,10 @@ function mapEditingTxToFormValues(
   tx: VwTransactionList | null
 ): Partial<TransactionFormValues> | undefined {
   if (!tx) return undefined;
-  const type: 'DEBIT' | 'CREDIT' = tx.debit > 0 ? 'DEBIT' : 'CREDIT';
-  const amount = Math.max(tx.debit, tx.credit).toString();
+  const debit = tx.debit ?? 0;
+  const credit = tx.credit ?? 0;
+  const type: 'DEBIT' | 'CREDIT' = debit > 0 ? 'DEBIT' : 'CREDIT';
+  const amount = Math.max(debit, credit).toString();
   return {
     type,
     account_sid: tx.account_sid || '',
@@ -55,6 +57,7 @@ export function TransactionEditModal({
 
         {editingTx && (
           <TransactionForm
+            key={editingTx.transaction_sid}
             mode="edit"
             initialValues={mapEditingTxToFormValues(editingTx)}
             accounts={accounts}

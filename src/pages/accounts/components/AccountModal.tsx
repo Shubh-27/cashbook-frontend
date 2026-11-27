@@ -105,7 +105,7 @@ export function AccountModal({
               id="acc-number"
               value={accNumber}
               onChange={e => onAccNumberChange(e.target.value)}
-              placeholder="e.g. Last 4 digits or full number"
+              placeholder="e.g. 1234"
               className={cn(
                 'h-11 rounded-xl bg-white border-slate-200 font-mono text-sm shadow-xs',
                 errors.account_number && 'border-red-500 focus-visible:ring-red-500'

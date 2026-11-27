@@ -3,10 +3,10 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from 'sonner';
 import { ImportProfileEditorPage } from './page';
-import { api } from '@/services/api';
+import { api } from '@/api';
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock('@/services/api', () => ({ api: { previewImportProfile: vi.fn(), createVersionedImportProfile: vi.fn(), updateVersionedImportProfile: vi.fn(), getVersionedImportProfile: vi.fn() } }));
+vi.mock('@/api', () => ({ api: { previewImportProfile: vi.fn(), createVersionedImportProfile: vi.fn(), updateVersionedImportProfile: vi.fn(), getVersionedImportProfile: vi.fn() } }));
 const preview = { cell_value_format: 'formatted_text' as const, file_type: 'csv', worksheets: ['CSV'], selected_worksheet: 'CSV', first_rows: [{ row_number: 1, cells: ['Metadata', '', '', ''] }, { row_number: 2, cells: ['Date', 'Description', 'Debit', 'Credit'] }, { row_number: 3, cells: ['02-04-2024', 'Coffee', '350', '-'] }], last_rows: [{ row_number: 480, cells: ['11-12-2024', 'Salary', '-', '1000'] }, { row_number: 508, cells: ['12-12-2024', 'Last transaction', '-', '50'] }, { row_number: 509, cells: ['footer', '', '', ''] }], divider_after_row: 3, total_rows: 509, detected_header_row: 2, footer_candidate_rows: [509], secondary_table_candidate_rows: [], has_ambiguous_date_format: false };
 const renderPage = (path = '/import-profiles/new') => render(
   <MemoryRouter initialEntries={[path]}>
@@ -97,10 +97,10 @@ describe('ImportProfileEditorPage integration', () => {
     expect(screen.getByLabelText('Transaction date *')).toHaveTextContent('Date');
     expect(screen.getByRole('button', { name: /Date Date/ })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Description / narration *' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Description / tag' }));
     fireEvent.click(screen.getByRole('button', { name: /Description$/ }));
 
-    expect(screen.getByLabelText('Description / narration *')).toHaveTextContent('Description');
+    expect(screen.getByLabelText('Description / tag')).toHaveTextContent('Description');
     expect(screen.getByRole('button', { name: /Description Description/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Date Date/ })).toBeInTheDocument();
   });
@@ -111,11 +111,11 @@ describe('ImportProfileEditorPage integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Transaction date *' }));
     fireEvent.click(screen.getByRole('button', { name: /Description$/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Description / narration *' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Description / tag' }));
     fireEvent.click(screen.getByRole('button', { name: /Description$/ }));
 
     expect(screen.getByLabelText('Transaction date *')).toHaveTextContent('Not mapped');
-    expect(screen.getByLabelText('Description / narration *')).toHaveTextContent('Description');
+    expect(screen.getByLabelText('Description / tag')).toHaveTextContent('Description');
     expect(screen.getByRole('button', { name: /Description Description/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Date Description/ })).not.toBeInTheDocument();
   });
@@ -126,7 +126,7 @@ describe('ImportProfileEditorPage integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Transaction date *' }));
     fireEvent.click(screen.getByRole('button', { name: /Date$/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Description / narration *' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Description / tag' }));
     fireEvent.click(screen.getByRole('button', { name: /Description$/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Debit / withdrawal' }));
     fireEvent.click(screen.getByRole('button', { name: /Debit$/ }));
@@ -157,7 +157,7 @@ describe('ImportProfileEditorPage integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Transactions end here' }));
     fireEvent.click(screen.getByRole('button', { name: 'Transaction date *' }));
     fireEvent.click(screen.getByRole('button', { name: /Date$/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Description / narration *' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Description / tag' }));
     fireEvent.click(screen.getByRole('button', { name: /Description$/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Debit / withdrawal' }));
     fireEvent.click(screen.getByRole('button', { name: /Debit$/ }));
@@ -227,7 +227,7 @@ describe('ImportProfileEditorPage integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Transactions end here' }));
     fireEvent.click(screen.getByRole('button', { name: 'Transaction date *' }));
     fireEvent.click(screen.getByRole('button', { name: /Date$/ }));
-    fireEvent.click(screen.getByRole('button', { name: 'Description / narration *' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Description / tag' }));
     fireEvent.click(screen.getByRole('button', { name: /Description$/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Debit / withdrawal' }));
     fireEvent.click(screen.getByRole('button', { name: /Debit$/ }));
@@ -254,7 +254,7 @@ describe('ImportProfileEditorPage integration', () => {
 
     expect(await screen.findByDisplayValue('Saved profile')).toBeInTheDocument();
     expect(screen.getByLabelText('Transaction date *')).toHaveTextContent('Date');
-    expect(screen.getByLabelText('Description / narration *')).toHaveTextContent('Description');
+    expect(screen.getByLabelText('Description / tag')).toHaveTextContent('Description');
     expect(api.previewImportProfile).not.toHaveBeenCalled();
   });
 

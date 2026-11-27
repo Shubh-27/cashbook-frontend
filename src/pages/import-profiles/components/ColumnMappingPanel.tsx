@@ -23,7 +23,8 @@ interface ColumnMappingPanelProps {
 
 const requiredFields: Array<[keyof StatementColumnMapping, string, boolean]> = [
   ['date', 'Transaction date', true],
-  ['description', 'Description / narration', true],
+  ['notes', 'Notes / narration', false],
+  ['description', 'Description / tag', false],
 ];
 const singleAmountFields: Array<[keyof StatementColumnMapping, string, boolean]> = [
   ['amount', 'Signed amount', true],
@@ -34,7 +35,6 @@ const splitAmountFields: Array<[keyof StatementColumnMapping, string, boolean]> 
 ];
 const additionalFields: Array<[keyof StatementColumnMapping, string, boolean]> = [
   ['balance', 'Balance', false],
-  ['notes', 'Notes', false],
 ];
 
 export function ColumnMappingPanel({

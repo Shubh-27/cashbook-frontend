@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '@/services/api';
+import { api } from '@/api';
 import type { VwAccountList, VwDescriptionList } from '@/types';
 
 interface AppState {
@@ -20,6 +20,12 @@ interface AppState {
 
   quickAddOpen: boolean;
   setQuickAddOpen: (open: boolean) => void;
+
+  statementImportInProgress: boolean;
+  setStatementImportInProgress: (inProgress: boolean) => void;
+
+  unsavedEdits: boolean;
+  setUnsavedEdits: (hasUnsaved: boolean) => void;
 }
 
 let accountsInFlight: Promise<void> | null = null;
@@ -93,4 +99,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   quickAddOpen: false,
   setQuickAddOpen: (open: boolean) => set({ quickAddOpen: open }),
+
+  statementImportInProgress: false,
+  setStatementImportInProgress: (inProgress: boolean) => set({ statementImportInProgress: inProgress }),
+
+  unsavedEdits: false,
+  setUnsavedEdits: (hasUnsaved: boolean) => set({ unsavedEdits: hasUnsaved }),
 }));

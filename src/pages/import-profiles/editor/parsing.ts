@@ -20,8 +20,8 @@ const STATUS_REASONS: Partial<Record<RowStatus, string>> = {
 };
 
 export function parseStatementAmount(value?: string): number | undefined {
-  if (empty(value)) return undefined;
-  const text = value!.trim(); const negative = /^\(/.test(text) || /\bdr\b/i.test(text) || /^-/.test(text); const numeric = Number(text.replace(/[^0-9.]/g, ''));
+  if (!value || empty(value)) return undefined;
+  const text = value.trim(); const negative = /^\(/.test(text) || /\bdr\b/i.test(text) || /^-/.test(text); const numeric = Number(text.replace(/[^0-9.]/g, ''));
   return Number.isFinite(numeric) && numeric > 0 ? (negative ? -numeric : numeric) : undefined;
 }
 
@@ -33,8 +33,8 @@ export function excelSerialToIso(serial: number): string | undefined {
 }
 
 export function formatStatementDate(value?: string, format?: string): string | undefined {
-  if (empty(value)) return undefined;
-  const text = value!.trim();
+  if (!value || empty(value)) return undefined;
+  const text = value.trim();
   if (format === 'excel_serial' || /^\d{5}(\.\d+)?$/.test(text)) {
     const isoSerial = excelSerialToIso(Number(text));
     if (isoSerial) return formatStatementDate(isoSerial);
@@ -55,7 +55,8 @@ export function formatStatementDate(value?: string, format?: string): string | u
 
 export function buildLivePreview(row: PreviewSourceRow | undefined, mapping: EditorColumnMapping, dateFormat?: string): LivePreview | null {
   if (!row) return null;
-  const date = formatStatementDate(cell(row, mapping.date), dateFormat); const description = cell(row, mapping.description).trim(); if (!date || !description) return null;
+  const date = formatStatementDate(cell(row, mapping.date), dateFormat); if (!date) return null;
+  const description = cell(row, mapping.description).trim() || cell(row, mapping.notes).trim() || '—';
   const debit = parseStatementAmount(cell(row, mapping.debit)); const credit = parseStatementAmount(cell(row, mapping.credit)); const amount = parseStatementAmount(cell(row, mapping.amount));
   if (debit !== undefined && credit !== undefined || amount === undefined && debit === undefined && credit === undefined) return null;
   const actualDebit = amount !== undefined ? amount < 0 ? Math.abs(amount) : undefined : debit === undefined ? undefined : Math.abs(debit); const actualCredit = amount !== undefined ? amount > 0 ? amount : undefined : credit === undefined ? undefined : Math.abs(credit);

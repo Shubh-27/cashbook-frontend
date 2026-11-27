@@ -23,7 +23,7 @@ export interface EditorState {
   undo?: Pick<EditorState, 'headerRow' | 'endRow'>;
 }
 
-type Action =
+export type EditorAction =
   | { type: 'preview'; preview: ImportProfilePreview; preserveMappings?: boolean }
   | { type: 'load'; preview: ImportProfilePreview; profileName: string; headerRow: number; endRow: number; columnMap: EditorColumnMapping; dateFormat?: string }
   | { type: 'profile-name'; value: string }
@@ -63,7 +63,7 @@ function getPreviewAutoState(preview: ImportProfilePreview) {
   return { headerRow, endRow, suggested, dateFormat, inferredName };
 }
 
-export function editorReducer(state: EditorState, action: Action): EditorState {
+export function editorReducer(state: EditorState, action: EditorAction): EditorState {
   if (action.type === 'profile-name') return { ...state, profileName: action.value, isDirty: true };
 
   if (action.type === 'preview') {

@@ -17,7 +17,7 @@ export function ImportValidationSummary({
 }: ImportValidationSummaryProps) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" aria-labelledby="import-validation-summary-heading">
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
         <h2 id="import-validation-summary-heading" className="text-sm font-semibold text-slate-900">Validation summary</h2>
         <p className="text-xs text-slate-500">Based on first and last 100 rows</p>
       </div>

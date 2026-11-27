@@ -28,19 +28,10 @@ import {
 import { SegmentedControl } from './SegmentedControl';
 import { TRANSACTION_TYPE_OPTIONS } from './segmented-control-options';
 import { rules, validateField, ValidationError } from '@/utils/validation';
-import type { Account, Description, VwAccountList } from '@/types';
+import type { Account, Description, TransactionFormValues, VwAccountList } from '@/types';
 import { cn } from '@/lib/utils';
 
-export interface TransactionFormValues {
-  type: 'DEBIT' | 'CREDIT';
-  account_sid: string;
-  transaction_date: string; // YYYY-MM-DD
-  amount: string;
-  description_name: string;
-  description_sid?: string;
-  notes?: string;
-  fastEntry?: boolean;
-}
+export type { TransactionFormValues };
 
 export interface TransactionFormHandle {
   focusFirstInput: () => void;
@@ -121,7 +112,8 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
         setFastEntry(initialValues.fastEntry || false);
         setErrors({});
       }
-    }, [initialValues, accounts]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialValues]);
 
     // Set default account if none selected
     useEffect(() => {
@@ -214,9 +206,9 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
     };
 
     return (
-      <form ref={internalFormRef} onSubmit={handleSubmit} noValidate className={cn('flex flex-col gap-2.5 py-1', className)}>
+      <form ref={internalFormRef} onSubmit={handleSubmit} noValidate className={cn('flex w-full min-w-0 flex-col gap-2 py-1', className)}>
         {/* Transaction Type Segmented Control */}
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1 pb-[18px]">
           <Label className="text-xs font-semibold text-slate-600">Transaction Type</Label>
           <SegmentedControl
             value={type}
@@ -232,7 +224,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
         </div>
 
         {/* Account Selector */}
-        <div className="space-y-1">
+        <div className="min-w-0 space-y-1">
           <Label htmlFor="tx-account" className="text-xs font-semibold text-slate-600">
             Account
           </Label>
@@ -250,7 +242,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
                 errors.account_sid && 'border-red-500 focus:ring-red-500'
               )}
             >
-              <SelectValue placeholder="Select Account" />
+              <SelectValue placeholder="Select account" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
               {accounts.map((acc) => (
@@ -261,7 +253,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
             </SelectContent>
           </Select>
           <p className={cn(
-            'text-[11px] font-medium text-red-500 min-h-[16px] leading-tight transition-opacity duration-150',
+            'h-[14px] text-[11px] font-medium text-red-500 leading-[14px] transition-opacity duration-150',
             errors.account_sid ? 'opacity-100' : 'opacity-0 select-none pointer-events-none'
           )}>
             {errors.account_sid || '\u00A0'}
@@ -295,7 +287,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
               />
             </div>
             <p className={cn(
-              'text-[11px] font-medium text-red-500 min-h-[16px] leading-tight transition-opacity duration-150',
+              'h-[14px] text-[11px] font-medium text-red-500 leading-[14px] transition-opacity duration-150',
               errors.amount ? 'opacity-100' : 'opacity-0 select-none pointer-events-none'
             )}>
               {errors.amount || '\u00A0'}
@@ -315,12 +307,12 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
                 setErrors((prev) => ({ ...prev, transaction_date: null }));
               }}
               className={cn(
-                'h-11 rounded-xl bg-white border-slate-200 text-sm uppercase shadow-xs',
+                'h-11 min-h-0 rounded-xl bg-white border-slate-200 text-sm uppercase shadow-xs',
                 errors.transaction_date && 'border-red-500 focus-visible:ring-red-500'
               )}
             />
             <p className={cn(
-              'text-[11px] font-medium text-red-500 min-h-[16px] leading-tight transition-opacity duration-150',
+              'h-[14px] text-[11px] font-medium text-red-500 leading-[14px] transition-opacity duration-150',
               errors.transaction_date ? 'opacity-100' : 'opacity-0 select-none pointer-events-none'
             )}>
               {errors.transaction_date || '\u00A0'}
@@ -329,7 +321,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
         </div>
 
         {/* Description / Tag Combobox */}
-        <div className="space-y-1 flex flex-col">
+        <div className="min-w-0 space-y-1 flex flex-col">
           <Label htmlFor="tx-description" className="text-xs font-semibold text-slate-600">
             Description / Tag
           </Label>
@@ -345,7 +337,9 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
                   errors.description && 'border-red-500 focus-visible:ring-red-500'
                 )}
               >
-                <span className="truncate">{descriptionName || 'Select or enter description...'}</span>
+                <span className={cn('truncate', !descriptionName && 'text-muted-foreground')}>
+                  {descriptionName || 'Select description'}
+                </span>
                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
               </Button>
             </PopoverTrigger>
@@ -357,7 +351,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
             >
               <Command>
                 <CommandInput
-                  placeholder="Search or enter description..."
+                  placeholder="Enter description..."
                   value={descriptionName}
                   onValueChange={(val) => {
                     setDescriptionName(val);
@@ -402,7 +396,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
             </PopoverContent>
           </Popover>
           <p className={cn(
-            'text-[11px] font-medium text-red-500 min-h-[16px] leading-tight transition-opacity duration-150',
+            'h-[14px] text-[11px] font-medium text-red-500 leading-[14px] transition-opacity duration-150',
             errors.description ? 'opacity-100' : 'opacity-0 select-none pointer-events-none'
           )}>
             {errors.description || '\u00A0'}
@@ -410,7 +404,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
         </div>
 
         {/* Notes Textarea */}
-        <div className="space-y-1.5">
+        <div className="space-y-1 pb-[18px]">
           <Label htmlFor="tx-notes" className="text-xs font-semibold text-slate-600">
             Notes (Optional)
           </Label>
@@ -418,7 +412,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
             id="tx-notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Additional details..."
+            placeholder="Notes (optional)"
             className="min-h-[70px] resize-none rounded-xl bg-white border-slate-200 text-sm shadow-xs"
           />
         </div>
@@ -450,7 +444,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
                 type="button"
                 onClick={onCancel}
                 disabled={isSubmitting}
-                className="rounded-xl flex-1 sm:flex-none text-slate-500 hover:text-slate-700"
+                className="h-11 sm:h-10 rounded-xl flex-1 sm:flex-none text-slate-500 hover:text-slate-700"
               >
                 Cancel
               </Button>
@@ -458,7 +452,7 @@ export const TransactionForm = forwardRef<TransactionFormHandle, TransactionForm
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-teal-600 hover:bg-teal-700 text-white rounded-xl flex-1 sm:flex-none font-semibold shadow-sm px-5"
+              className="h-11 sm:h-10 bg-teal-600 hover:bg-teal-700 text-white rounded-xl flex-1 sm:flex-none font-semibold shadow-sm px-5"
             >
               {submitButtonText || (mode === 'add' ? 'Add Transaction' : 'Save Changes')}
             </Button>

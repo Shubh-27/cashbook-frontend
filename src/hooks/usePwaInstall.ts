@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { BeforeInstallPromptEvent } from '../types/electron';
+import type { BeforeInstallPromptEvent } from '../electron';
 
 // Global variable to capture event if it fired before hook mounted
 let globalDeferredPrompt: BeforeInstallPromptEvent | null = null;

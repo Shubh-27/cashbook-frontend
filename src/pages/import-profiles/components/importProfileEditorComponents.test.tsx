@@ -25,7 +25,8 @@ describe('import profile editor components', () => {
   it('renders mapping controls', () => {
     render(<ColumnMappingPanel headers={['Tran Date', 'PARTICULARS']} mapping={{ date: 0 }} onMappingChange={vi.fn()} />);
     expect(screen.getByLabelText('Transaction date *')).toHaveTextContent('Tran Date');
-    expect(screen.getByLabelText('Description / narration *')).toBeInTheDocument();
+    expect(screen.getByLabelText('Description / tag')).toBeInTheDocument();
+    expect(screen.getByLabelText('Notes / narration')).toBeInTheDocument();
   });
 
   it('renders profile rules checklist', () => {

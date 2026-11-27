@@ -37,7 +37,7 @@ export function DescriptionCardFeed({
           {data.map((desc) => (
             <div
               key={desc.description_sid}
-              className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col gap-3"
+              className="bg-white rounded-2xl px-4 pt-4 pb-2.5 border border-slate-200/80 shadow-sm flex flex-col gap-3"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -62,7 +62,7 @@ export function DescriptionCardFeed({
                   size="sm"
                   onClick={() => onDescriptionClick(desc.description_sid)}
                   aria-label="View activity"
-                  className="h-8 px-2.5 text-xs text-teal-600 hover:bg-teal-50 rounded-lg font-medium flex items-center gap-1"
+                  className="h-8 px-2.5 text-xs text-teal-600 hover:bg-teal-100/70 rounded-lg font-medium flex items-center gap-1"
                 >
                   <ArrowUpRight className="w-3.5 h-3.5" />
                   View Activity
@@ -73,7 +73,7 @@ export function DescriptionCardFeed({
                     size="sm"
                     onClick={() => onEdit(desc)}
                     aria-label="Edit description"
-                    className="h-8 px-2.5 text-xs text-slate-500 hover:text-teal-600 hover:bg-teal-50 rounded-lg"
+                    className="h-8 px-2.5 text-xs text-slate-500 hover:text-teal-600 hover:bg-teal-100/70 rounded-lg"
                   >
                     <Pencil className="w-3.5 h-3.5 mr-1" />
                     Edit

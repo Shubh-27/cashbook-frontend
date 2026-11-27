@@ -9,13 +9,10 @@ import {
   CommandList,
 } from './ui/command';
 import { Check, ChevronsUpDown } from 'lucide-react';
+import type { FilterOption } from '@/types';
 import { cn } from '../lib/utils';
 
-export interface FilterOption {
-  value: string;
-  label: string;
-  subLabel?: string;
-}
+export type { FilterOption };
 
 export interface MultiSelectFilterPopoverProps {
   options: FilterOption[];

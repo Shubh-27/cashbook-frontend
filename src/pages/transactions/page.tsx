@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Download, Upload } from 'lucide-react';
 import { useAppStore } from '@/store';
-import { api } from '@/services/api';
+import { api } from '@/api';
 import type { VwTransactionList, FilterRequest } from '@/types';
 import type { TransactionFormValues } from '@/components/common/TransactionForm';
 import { isValid } from 'date-fns';
@@ -20,12 +20,12 @@ import { TransactionEditModal } from './components/TransactionEditModal';
 import { TransactionExportModal } from './components/TransactionExportModal';
 import { DeleteConfirmModal } from '@/components/DeleteConfirmModal';
 import { TransactionFilterPanel } from './components/TransactionFilterPanel';
-import { StatementImportWizard } from './components/StatementImportWizard';
 import { DEFAULT_PAGE_SIZE } from '@/config/constants';
 
-import { QUERY_PARAMS } from '@/config/routes';
+import { QUERY_PARAMS, ROUTES } from '@/config/routes';
 
 export function Transaction() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const accounts = useAppStore(state => state.accounts);
   const descriptions = useAppStore(state => state.descriptions);
@@ -79,7 +79,6 @@ export function Transaction() {
   const [editingTx, setEditingTx] = useState<VwTransactionList | null>(null);
   const [deleteTargetTx, setDeleteTargetTx] = useState<VwTransactionList | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [importWizardOpen, setImportWizardOpen] = useState(false);
 
   // Export Modal State
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -139,6 +138,7 @@ export function Transaction() {
         return;
       }
       console.error('Failed to load transactions:', e);
+      toast.error(e instanceof Error ? e.message : 'Failed to load transactions');
     }
   }, [selectedAccountSids, selectedDescriptionSids, search, page, sortBy, sortOrder, dateRange]);
 
@@ -190,12 +190,11 @@ export function Transaction() {
     try {
       await api.deleteTransaction(deleteTargetTx.transaction_sid, deleteTargetTx.account_sid ?? '');
       setDeleteTargetTx(null);
-      loadData();
-      fetchAccounts();
+      await Promise.all([loadData(), fetchAccounts()]);
       refreshTransactions();
     } catch (e) {
       console.error('Failed to delete transaction:', e);
-      alert(e instanceof Error ? e.message : 'Failed to delete transaction');
+      toast.error(e instanceof Error ? e.message : 'Failed to delete transaction');
     }
   };
 
@@ -237,6 +236,7 @@ export function Transaction() {
       setExportModalOpen(false);
     } catch (e) {
       console.error(e);
+      toast.error(e instanceof Error ? e.message : 'Failed to export transactions');
     } finally {
       setIsExporting(false);
     }
@@ -255,16 +255,14 @@ export function Transaction() {
       await api.updateTransaction(editingTx.transaction_sid, {
         account_sid: values.account_sid,
         transaction_date: newTransactionDate,
-        description_sid: values.description_sid || '',
+        description_sid: values.description_sid || null,
         description_name: values.description_name,
         debit: values.type === 'DEBIT' ? amount : 0,
         credit: values.type === 'CREDIT' ? amount : 0,
         notes: values.notes || null
       });
       setEditingTx(null);
-      loadData();
-      fetchAccounts();
-      fetchDescriptions();
+      await Promise.all([loadData(), fetchAccounts(), fetchDescriptions()]);
       refreshTransactions();
     } catch (err) {
       console.error('Failed to update transaction:', err);
@@ -342,7 +340,7 @@ export function Transaction() {
   const totalPages = Math.ceil(total / DEFAULT_PAGE_SIZE);
 
   return (
-    <div className="flex flex-col gap-4 md:gap-6 animate-in fade-in duration-300 md:h-full flex-1 min-h-0">
+    <div className="flex flex-col gap-3 md:gap-6 animate-in fade-in duration-300 md:h-full flex-1 min-h-0">
       {/* Header with Search, Filters, and Export */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
         <div className="hidden md:block">
@@ -350,13 +348,13 @@ export function Transaction() {
           <p className="text-xs md:text-sm text-slate-500 mt-0.5">View, filter, and export your transaction records.</p>
         </div>
 
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 w-full sm:w-auto">
           <SearchInput
             placeholder="Search..."
             value={search}
             onChange={handleSearchChange}
             onClear={handleClearSearch}
-            className="flex-1 sm:w-64 sm:flex-none"
+            className="flex-1 min-w-0 sm:w-64 sm:flex-none"
           />
 
           <div className="md:hidden">
@@ -399,9 +397,10 @@ export function Transaction() {
 
           <Button
             variant="outline"
-            onClick={() => setImportWizardOpen(true)}
-            className="shrink-0 h-10 sm:h-9 px-3 sm:px-3.5 rounded-xl border-slate-200 text-slate-600 hover:text-teal-600 hover:bg-teal-50"
+            onClick={() => navigate(ROUTES.TRANSACTIONS_IMPORT)}
+            className="shrink-0 h-10 sm:h-9 px-2.5 sm:px-3.5 rounded-xl border-slate-200 text-slate-600 hover:text-teal-600 hover:bg-teal-50"
             aria-label="Import bank statement"
+            title="Import bank statement"
           >
             <Upload className="w-4 h-4 sm:mr-1.5 text-slate-500" />
             <span className="hidden sm:inline">Import</span>
@@ -410,8 +409,9 @@ export function Transaction() {
           <Button
             variant="outline"
             onClick={() => setExportModalOpen(true)}
-            className="shrink-0 h-10 sm:h-9 px-3 sm:px-3.5 rounded-xl border-slate-200 text-slate-600 hover:text-teal-600 hover:bg-teal-50"
+            className="shrink-0 h-10 sm:h-9 px-2.5 sm:px-3.5 rounded-xl border-slate-200 text-slate-600 hover:text-teal-600 hover:bg-teal-50"
             aria-label="Export transactions"
+            title="Export transactions"
           >
             <Download className="w-4 h-4 sm:mr-1.5 text-slate-500" />
             <span className="hidden sm:inline">Export</span>
@@ -475,18 +475,6 @@ export function Transaction() {
         onExport={handleExport}
       />
 
-      <StatementImportWizard
-        open={importWizardOpen}
-        onOpenChange={setImportWizardOpen}
-        accounts={accounts}
-        onComplete={() => {
-          loadData();
-          fetchAccounts();
-          fetchDescriptions();
-          refreshTransactions();
-        }}
-      />
-
       {/* Delete Confirmation Modal */}
       <DeleteConfirmModal
         open={!!deleteTargetTx}
@@ -498,3 +486,5 @@ export function Transaction() {
     </div>
   );
 }
+
+export default Transaction;

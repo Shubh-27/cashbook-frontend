@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { DataGrid, type CellMouseArgs, type Column, type ColumnWidths, type DataGridHandle, type RenderCellProps, type RenderHeaderCellProps } from 'react-data-grid';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useOverlayScrollbars } from '@/hooks/useOverlayScrollbars';
 
 export interface SpreadsheetRow {
   id: string;
@@ -117,6 +118,27 @@ export function StatementSpreadsheetGrid({
 }: StatementSpreadsheetGridProps) {
   const gridRef = useRef<DataGridHandle>(null);
 
+  const HEADER_HEIGHT = 35;
+  const FROZEN_COL_WIDTH = 82;
+  const getGridElement = useCallback(() => gridRef.current?.element, []);
+  const {
+    scrollMetrics,
+    draggingAxis,
+    isScrolling,
+    isHoveringScrollbar,
+    setIsHoveringScrollbar,
+    startThumbDrag,
+    topInset: V_TRACK_TOP,
+    bottomInset: V_TRACK_BOTTOM,
+    leftInset: H_TRACK_LEFT,
+    rightInset: H_TRACK_RIGHT,
+  } = useOverlayScrollbars(getGridElement, [rows, columns], {
+    topInset: HEADER_HEIGHT + 4,
+    bottomInset: 10,
+    leftInset: FROZEN_COL_WIDTH + 4,
+    rightInset: 12,
+  });
+
   useEffect(() => {
     if (focusRowNumber === undefined) return;
     const rowIdx = rows.findIndex(row => row.rowNumber === focusRowNumber);
@@ -180,7 +202,7 @@ export function StatementSpreadsheetGrid({
           const classes: string[] = [];
           if (isRightAligned && !row.isDivider && !row.isPreHeaderDivider) classes.push('text-right tabular-nums');
           if (row.id === selectedCell?.rowId && column.key === selectedCell.columnKey && !row.isPreHeaderDivider) {
-            classes.push('outline outline-2 outline-teal-500 outline-offset-[-2px]');
+            classes.push('ring-2 ring-inset ring-teal-500');
           }
           return classes.join(' ') || undefined;
         },
@@ -224,8 +246,11 @@ export function StatementSpreadsheetGrid({
     }),
   ], [columns, selectedCell, onColumnHeaderClick, mappingBadges, isPickingColumn, headerRowId, lastTransactionRowId, showPreHeaderRows, onTogglePreHeaderRows, rowReasons]);
 
+  const lastRowId = rows[rows.length - 1]?.id;
+
   const rowClass = (row: SpreadsheetRow) => {
     const classes = ['border-b border-slate-100'];
+    if (row.id === lastRowId) classes.push('rdg-last-row');
     if (row.isPreHeaderDivider) {
       classes.push('bg-slate-50/90 text-slate-600');
       return classes.join(' ');
@@ -248,7 +273,7 @@ export function StatementSpreadsheetGrid({
   };
 
   return (
-    <div className="relative h-[60vh] min-h-[460px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" data-testid="statement-spreadsheet-grid">
+    <div className="relative max-h-[60vh] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" data-testid="statement-spreadsheet-grid">
       {selectedRowNumber !== undefined && (onSetHeader || onSetEnd) && (() => {
         const selectedIdx = rows.findIndex(r => r.rowNumber === selectedRowNumber);
         const scrollTop = gridRef.current?.element?.scrollTop ?? 0;
@@ -260,7 +285,7 @@ export function StatementSpreadsheetGrid({
             role="dialog"
             aria-label={`Row ${selectedRowNumber} actions`}
             style={{ top: `${clampedTop}px` }}
-            className="absolute left-24 z-20 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/95 px-3 py-1.5 shadow-lg backdrop-blur"
+            className="absolute left-2 right-2 sm:left-24 sm:right-auto z-20 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white/95 px-3 py-1.5 shadow-lg backdrop-blur"
           >
           <span className="text-xs font-semibold text-slate-700">Row {selectedRowNumber}</span>
           <span title={headerDisabledReason}>
@@ -307,9 +332,56 @@ export function StatementSpreadsheetGrid({
         onColumnWidthsChange={onColumnWidthsChange}
         defaultColumnOptions={{ resizable: true }}
         headerRowClass="!bg-slate-100 sticky top-0 z-10"
-        style={{ height: '100%', blockSize: '100%' }}
-        className="rdg-light !h-full rounded-2xl text-sm [--rdg-background-color:#ffffff] [--rdg-border-color:#e2e8f0] [--rdg-header-background-color:#f8fafc]"
+        className="rdg-light h-auto max-h-[calc(60vh-2px)] !border-0 text-sm [--rdg-background-color:#ffffff] [--rdg-border-color:#e2e8f0] [--rdg-header-background-color:#f8fafc] [--rdg-selection-color:#0d9488]"
       />
+      {scrollMetrics.showV && (
+        <div
+          aria-hidden="true"
+          style={{ top: `${V_TRACK_TOP}px`, bottom: `${V_TRACK_BOTTOM}px` }}
+          className={`pointer-events-none absolute right-1 z-10 w-1 transition-opacity duration-200 ${
+            isScrolling || draggingAxis === 'v' || isHoveringScrollbar ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <div
+            onMouseDown={e => startThumbDrag('v', e)}
+            onMouseEnter={() => setIsHoveringScrollbar(true)}
+            onMouseLeave={() => setIsHoveringScrollbar(false)}
+            style={{
+              height: `${scrollMetrics.vThumbSize}px`,
+              transform: `translateY(${scrollMetrics.vThumbPos}px)`,
+            }}
+            className={`pointer-events-auto w-full cursor-pointer rounded-full transition-colors ${
+              draggingAxis === 'v'
+                ? 'bg-teal-600/80'
+                : 'bg-slate-500/40 hover:bg-teal-600/70'
+            }`}
+          />
+        </div>
+      )}
+      {scrollMetrics.showH && (
+        <div
+          aria-hidden="true"
+          style={{ left: `${H_TRACK_LEFT}px`, right: `${H_TRACK_RIGHT}px` }}
+          className={`pointer-events-none absolute bottom-1 z-10 h-1 transition-opacity duration-200 ${
+            isScrolling || draggingAxis === 'h' || isHoveringScrollbar ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <div
+            onMouseDown={e => startThumbDrag('h', e)}
+            onMouseEnter={() => setIsHoveringScrollbar(true)}
+            onMouseLeave={() => setIsHoveringScrollbar(false)}
+            style={{
+              width: `${scrollMetrics.hThumbSize}px`,
+              transform: `translateX(${scrollMetrics.hThumbPos}px)`,
+            }}
+            className={`pointer-events-auto h-full cursor-pointer rounded-full transition-colors ${
+              draggingAxis === 'h'
+                ? 'bg-teal-600/80'
+                : 'bg-slate-500/40 hover:bg-teal-600/70'
+            }`}
+          />
+        </div>
+      )}
     </div>
   );
 }
