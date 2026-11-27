@@ -83,18 +83,6 @@ export default defineConfig(({ mode }) => {
                     type: 'image/png',
                     purpose: 'maskable',
                   },
-                  {
-                    src: '/pwa-icon.svg',
-                    sizes: '192x192 512x512',
-                    type: 'image/svg+xml',
-                    purpose: 'any',
-                  },
-                  {
-                    src: '/logo.svg',
-                    sizes: '48x48 72x72 96x96 128x128',
-                    type: 'image/svg+xml',
-                    purpose: 'any',
-                  },
                 ],
                 shortcuts: [
                   {
@@ -102,14 +90,14 @@ export default defineConfig(({ mode }) => {
                     short_name: 'Transactions',
                     description: 'View all transactions',
                     url: '/#/transactions',
-                    icons: [{ src: '/logo.svg', sizes: '96x96', type: 'image/svg+xml' }],
+                    icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
                   },
                   {
                     name: 'Accounts',
                     short_name: 'Accounts',
                     description: 'Manage bank accounts',
                     url: '/#/accounts',
-                    icons: [{ src: '/logo.svg', sizes: '96x96', type: 'image/svg+xml' }],
+                    icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }],
                   },
                 ],
               },
