@@ -16,6 +16,8 @@ dist-ssr
 
 # Local data and secrets
 .env*
+# Web build mode uses relative /api proxy path (no secrets)
+!.env.web
 *.db
 *.db-shm
 *.db-wal

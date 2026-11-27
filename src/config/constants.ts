@@ -1,6 +1,10 @@
 export const DEFAULT_API_PORT = 5050;
 
 function getDefaultApiBaseUrl(): string {
+  const envUrl = import.meta.env.VITE_API_URL?.trim();
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, '');
+  }
   if (typeof window === 'undefined' || window.location.protocol === 'file:' || !window.location.hostname) {
     return `http://localhost:${DEFAULT_API_PORT}/api`;
   }
@@ -8,7 +12,6 @@ function getDefaultApiBaseUrl(): string {
 }
 
 export const DEFAULT_API_BASE_URL = getDefaultApiBaseUrl();
-export const API_BASE_URL = import.meta.env.VITE_API_URL || DEFAULT_API_BASE_URL;
+export const API_BASE_URL = DEFAULT_API_BASE_URL;
 
 export const DEFAULT_PAGE_SIZE = 50;
-

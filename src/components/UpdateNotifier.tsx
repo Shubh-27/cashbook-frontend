@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAppUpdater } from '@/hooks/useAppUpdater';
+import { usePwaUpdate } from '@/hooks/usePwaUpdate';
 import { useAppStore } from '@/store';
 import { Button } from '@/components/ui/button';
 import {
@@ -31,11 +33,25 @@ export const UpdateNotifier: React.FC = () => {
   const [dismissed, setDismissed] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const { needRefresh, reload } = usePwaUpdate();
+
   useEffect(() => {
     if (state === 'checking') {
       setDismissed(false);
     }
   }, [state]);
+
+  useEffect(() => {
+    if (isElectron || !needRefresh) return;
+    toast('New version available', {
+      id: 'pwa-update-available',
+      duration: Infinity,
+      action: {
+        label: 'Reload',
+        onClick: reload,
+      },
+    });
+  }, [isElectron, needRefresh, reload]);
 
   if (!isElectron || dismissed) return null;
 
